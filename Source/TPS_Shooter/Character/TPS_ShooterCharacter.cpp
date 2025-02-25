@@ -111,84 +111,113 @@ void ATPS_ShooterCharacter::InputAxisY(float value)
 	AxisY = value;
 }
 
-void ATPS_ShooterCharacter::MovementTick(float DeltaTIme)
+void ATPS_ShooterCharacter::MovementTick(float DeltaTime)
 {
-	AddMovementInput(FVector(1.0f, 0.0f, 0.0f), AxisX);
-	AddMovementInput(FVector(0.0f, 1.0f, 0.0f), AxisY);
+	FVector MovementInput = FVector(AxisX, AxisY, 0.0f).GetSafeNormal();
 
-	APlayerController* myController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-	if (myController)
+	if (MovementState == EMovementState::SprintRun_State)
+	{
+		FVector ForwardVector = GetActorForwardVector();
+		float ForwardComponent = FVector::DotProduct(MovementInput, ForwardVector);
+		if (ForwardComponent > 0.7f)
+		{
+			AddMovementInput(ForwardVector, ForwardComponent);
+		}
+	}
+	else
+	{
+		AddMovementInput(FVector(1.0f, 0.0f, 0.0f), AxisX);
+		AddMovementInput(FVector(0.0f, 1.0f, 0.0f), AxisY);
+	}
+
+	APlayerController* MyController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	if (MyController)
 	{
 		FHitResult ResultHit;
-		myController->GetHitResultUnderCursorByChannel(ETraceTypeQuery::TraceTypeQuery6, false, ResultHit);
+		MyController->GetHitResultUnderCursorByChannel(ETraceTypeQuery::TraceTypeQuery6, false, ResultHit);
 		float FindRotatorResultYaw = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), ResultHit.Location).Yaw;
 		SetActorRotation(FQuat(FRotator(0.0f, FindRotatorResultYaw, 0.0f)));
 	}
+
+	if (MovementState == EMovementState::SprintRun_State)
+	{
+		CurrentStamina -= StaminaDecreaseRate * DeltaTime;
+		if (CurrentStamina < 0.0f)
+		{
+			CurrentStamina = 0.0f;
+		}
+	}
+	else
+	{
+		CurrentStamina += StaminaIncreaseRate * DeltaTime;
+		if (CurrentStamina > MaxStamina)
+		{
+			CurrentStamina = MaxStamina;
+		}
+	}
+
+	ChangeMovementState();
 }
 
 void ATPS_ShooterCharacter::CharacterUpdate()
 {
 	float ResSpeed = 600.0f;
+	float ResAcceleration = MovementSpeedInfo.NormalAcceleration;
+
 	switch (MovementState)
 	{
-		case EMovementState::Aim_State:
-			ResSpeed = MovementSpeedInfo.AimSpeedNormal;
-			break;
-		case EMovementState::AimWalk_State:
-			ResSpeed = MovementSpeedInfo.AimSpeedWalk;
-			break;
-		case EMovementState::Walk_State:
-			ResSpeed = MovementSpeedInfo.WalkSpeedNormal;
-			break;
-		case EMovementState::Run_State:
-			ResSpeed = MovementSpeedInfo.RunSpeedNormal;
-			break;
-		case EMovementState::SprintRun_State:
-			ResSpeed = MovementSpeedInfo.SprintRunSpeedRun;
-			break;
-		default:
-			break;
+	case EMovementState::Aim_State:
+		ResSpeed = MovementSpeedInfo.AimSpeedNormal;
+		break;
+	case EMovementState::AimWalk_State:
+		ResSpeed = MovementSpeedInfo.AimSpeedWalk;
+		break;
+	case EMovementState::Walk_State:
+		ResSpeed = MovementSpeedInfo.WalkSpeedNormal;
+		break;
+	case EMovementState::Run_State:
+		ResSpeed = MovementSpeedInfo.RunSpeedNormal;
+		break;
+	case EMovementState::SprintRun_State:
+		ResSpeed = MovementSpeedInfo.SprintRunSpeedRun;
+		ResAcceleration = MovementSpeedInfo.SprintAcceleration;
+		break;
+	default:
+		break;
 	}
 
 	GetCharacterMovement()->MaxWalkSpeed = ResSpeed;
+	GetCharacterMovement()->MaxAcceleration = ResAcceleration;
 }
 
 void ATPS_ShooterCharacter::ChangeMovementState()
 {
-	FVector ForwardVector = GetActorForwardVector(); 
-	FVector MovementInput = GetVelocity().GetSafeNormal(); 
+	FVector ForwardVector = GetActorForwardVector();
+	FVector MovementInput = GetVelocity().GetSafeNormal();
 	bool bIsMovingForward = FVector::DotProduct(ForwardVector, MovementInput) > 0.7f;
 
-	if (!WalkEnabled && !SprintRunEnabled && !AimEnabled)
+	if (SprintRunEnabled && bIsMovingForward && CurrentStamina > 0)
 	{
-		MovementState = EMovementState::Run_State;
+		WalkEnabled = false;
+		AimEnabled = false;
+		MovementState = EMovementState::SprintRun_State;
+	}
+	else if (WalkEnabled && AimEnabled)
+	{
+		MovementState = EMovementState::AimWalk_State;
+	}
+	else if (WalkEnabled)
+	{
+		MovementState = EMovementState::Walk_State;
+	}
+	else if (AimEnabled)
+	{
+		MovementState = EMovementState::Aim_State;
 	}
 	else
 	{
-		if (SprintRunEnabled && bIsMovingForward)
-		{
-			WalkEnabled = false;
-			AimEnabled = false;
-			MovementState = EMovementState::SprintRun_State;
-		}
-		if (WalkEnabled && !SprintRunEnabled && AimEnabled)
-		{
-			MovementState = EMovementState::AimWalk_State;
-		}
-		else
-		{
-			if (WalkEnabled && !SprintRunEnabled && !AimEnabled)
-			{
-				MovementState = EMovementState::Walk_State;
-			}
-			else
-			{
-				if (!WalkEnabled && !SprintRunEnabled && AimEnabled)
-				{
-					MovementState = EMovementState::Aim_State;
-				}
-			}
-		}
+		MovementState = EMovementState::Run_State;
 	}
+
 	CharacterUpdate();
 }

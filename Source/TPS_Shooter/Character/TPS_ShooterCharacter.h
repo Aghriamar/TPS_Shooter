@@ -42,6 +42,18 @@ private:
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+		float MaxStamina = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+		float CurrentStamina = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+		float StaminaDecreaseRate = 10.0f; // ”меньшение выносливости в секунду при спринте
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+		float StaminaIncreaseRate = 5.0f;  // ¬осстановление выносливости в секунду
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 		EMovementState MovementState = EMovementState::Run_State;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 		FCharacterSpeed MovementSpeedInfo;

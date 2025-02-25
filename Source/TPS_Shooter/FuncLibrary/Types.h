@@ -31,6 +31,12 @@ struct FCharacterSpeed
 		float AimSpeedWalk = 100.0f;
 	UPROPERTY(EditAnywhere, BLueprintReadWrite, Category = "Movement")
 		float SprintRunSpeedRun = 800.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+		float NormalAcceleration = 2048.0f; // Стандартное ускорение (по умолчанию в UE4)
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+		float SprintAcceleration = 4096.0f; // Ускорение для спринта
 };
 
 UCLASS()
