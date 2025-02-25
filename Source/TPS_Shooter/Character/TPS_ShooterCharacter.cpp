@@ -155,13 +155,17 @@ void ATPS_ShooterCharacter::CharacterUpdate()
 
 void ATPS_ShooterCharacter::ChangeMovementState()
 {
+	FVector ForwardVector = GetActorForwardVector(); 
+	FVector MovementInput = GetVelocity().GetSafeNormal(); 
+	bool bIsMovingForward = FVector::DotProduct(ForwardVector, MovementInput) > 0.7f;
+
 	if (!WalkEnabled && !SprintRunEnabled && !AimEnabled)
 	{
 		MovementState = EMovementState::Run_State;
 	}
 	else
 	{
-		if (SprintRunEnabled)
+		if (SprintRunEnabled && bIsMovingForward)
 		{
 			WalkEnabled = false;
 			AimEnabled = false;
