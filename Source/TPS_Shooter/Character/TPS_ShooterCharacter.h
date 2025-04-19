@@ -6,6 +6,8 @@
 #include "GameFramework/Character.h"
 #include "../FuncLibrary/Types.h"
 #include "../Items/WeaponDefault.h"
+//#include "Components/WidgetComponent.h"
+
 #include "TPS_ShooterCharacter.generated.h"
 
 UCLASS(Blueprintable)
@@ -79,7 +81,7 @@ public:
 
 	//For Demo
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Demo")
-		TSubclassOf<AWeaponDefault> InitWeaponClass = nullptr;
+		FName InitWeaponName;
 
 	UDecalComponent* CurrentCursor = nullptr;
 
@@ -109,7 +111,24 @@ public:
 	UFUNCTION(BlueprintCallable)
 		AWeaponDefault* GetCurrentWeapon();
 	UFUNCTION(BlueprintCallable)
-		void InitWeapon();
+		void InitWeapon(FName IdWeaponName);
+	UFUNCTION(BlueprintCallable)
+		void TryReloadWeapon();
+	UFUNCTION()
+		void WeaponReloadStart(UAnimMontage* Anim);
+	UFUNCTION()
+		void WeaponReloadEnd();
+	UFUNCTION(BlueprintNativeEvent)
+		void WeaponReloadStart_BP(UAnimMontage* Anim);
+		void WeaponReloadStart_BP_Implementation(UAnimMontage* Anim);
+	UFUNCTION(BlueprintNativeEvent)
+		void WeaponReloadEnd_BP();
+		void WeaponReloadEnd_BP_Implementation();
+	UFUNCTION()
+		void WeaponFireStart(UAnimMontage* Anim);
+	UFUNCTION(BlueprintNativeEvent)
+		void WeaponFireStart_BP(UAnimMontage* Anim);
+		void WeaponFireStart_BP_Implementation(UAnimMontage* Anim);
 
 	UFUNCTION(BlueprintCallable)
 		UDecalComponent* GetCursorToWorld();
