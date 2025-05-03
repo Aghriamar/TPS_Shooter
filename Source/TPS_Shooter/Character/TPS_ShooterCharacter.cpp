@@ -44,16 +44,12 @@ ATPS_ShooterCharacter::ATPS_ShooterCharacter()
 	TopDownCameraComponent->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	TopDownCameraComponent->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
-	// Create a decal in the world to show the cursor's location
-	/*CursorToWorld = CreateDefaultSubobject<UDecalComponent>("CursorToWorld");
-	CursorToWorld->SetupAttachment(RootComponent);
-	static ConstructorHelpers::FObjectFinder<UMaterial> DecalMaterialAsset(TEXT("Material'/Game/Materials/M_Cursor_Decal.M_Cursor_Decal'"));
-	if (DecalMaterialAsset.Succeeded())
+	InventoryComponent = CreateDefaultSubobject<UTPSInventoryComponent>(TEXT("InventoryComponent"));
+
+	if (InventoryComponent)
 	{
-		CursorToWorld->SetDecalMaterial(DecalMaterialAsset.Object);
+		InventoryComponent->OnSwitchWeapon.AddDynamic(this, &ATPS_ShooterCharacter::InitWeapon);
 	}
-	CursorToWorld->DecalSize = FVector(16.0f, 32.0f, 32.0f);
-	CursorToWorld->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f).Quaternion());*/
 
 	// Activate ticking in order to update the cursor every frame.
 	PrimaryActorTick.bCanEverTick = true;
@@ -85,7 +81,7 @@ void ATPS_ShooterCharacter::Tick(float DeltaSeconds)
 void ATPS_ShooterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	InitWeapon(InitWeaponName);
+
 	if (CursorMaterial)
 	{
 		CurrentCursor = UGameplayStatics::SpawnDecalAtLocation(GetWorld(), CursorMaterial, CursorSize, FVector(0));
@@ -102,16 +98,19 @@ void ATPS_ShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	PlayerInputComponent->BindAction(TEXT("FireEvent"), EInputEvent::IE_Pressed, this, &ATPS_ShooterCharacter::InputAttackPressed);
 	PlayerInputComponent->BindAction(TEXT("FireEvent"), EInputEvent::IE_Released, this, &ATPS_ShooterCharacter::InputAttackReleased);
 	PlayerInputComponent->BindAction(TEXT("ReloadEvent"), EInputEvent::IE_Released, this, &ATPS_ShooterCharacter::TryReloadWeapon);
-}
 
-void ATPS_ShooterCharacter::InputAxisX(float value)
-{
-	AxisX = value;
+	PlayerInputComponent->BindAction(TEXT("SwitchNextWeapon"), EInputEvent::IE_Pressed, this, &ATPS_ShooterCharacter::TrySwitchNextWeapon);
+	PlayerInputComponent->BindAction(TEXT("SwitchPreviousWeapon"), EInputEvent::IE_Pressed, this, &ATPS_ShooterCharacter::TrySwitchPreviousWeapon);
 }
 
 void ATPS_ShooterCharacter::InputAxisY(float value)
 {
 	AxisY = value;
+}
+
+void ATPS_ShooterCharacter::InputAxisX(float value)
+{
+	AxisX = value;
 }
 
 void ATPS_ShooterCharacter::InputAttackPressed()
@@ -292,8 +291,14 @@ AWeaponDefault* ATPS_ShooterCharacter::GetCurrentWeapon()
 	return CurrentWeapon;
 }
 
-void ATPS_ShooterCharacter::InitWeapon(FName IdWeaponName)
+void ATPS_ShooterCharacter::InitWeapon(FName IdWeaponName, FAdditionalWeaponInfo WeaponAdditionalInfo, int32 NewCurrentIndexWeapon)
 {
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->Destroy();
+		CurrentWeapon = nullptr;
+	}
+
 	UTPS_ShooterGameInstance* myGI = Cast<UTPS_ShooterGameInstance>(GetGameInstance());
 	FWeaponInfo myWeaponInfo;
 	if (myGI)
@@ -307,7 +312,7 @@ void ATPS_ShooterCharacter::InitWeapon(FName IdWeaponName)
 
 				FActorSpawnParameters SpawnParams;
 				SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-				SpawnParams.Owner = GetOwner();
+				SpawnParams.Owner = this;
 				SpawnParams.Instigator = GetInstigator();
 
 				AWeaponDefault* myWeapon = Cast<AWeaponDefault>(GetWorld()->SpawnActor(myWeaponInfo.WeaponClass, &SpawnLocation, &SpawnRotation, SpawnParams));
@@ -318,14 +323,23 @@ void ATPS_ShooterCharacter::InitWeapon(FName IdWeaponName)
 					CurrentWeapon = myWeapon;
 
 					myWeapon->WeaponSetting = myWeaponInfo;
-					myWeapon->WeaponInfo.Round = myWeaponInfo.MaxRound;
-					//Remove !!! Debug
+					//myWeapon->AdditionalWeaponInfo.Round = myWeaponInfo.MaxRound;
 					myWeapon->ReloadTime = myWeaponInfo.ReloadTime;
 					myWeapon->UpdateStateWeapon(MovementState);
+					myWeapon->AdditionalWeaponInfo = WeaponAdditionalInfo;
+					//if(InventoryComponent)
+					CurrentIndexWeapon = NewCurrentIndexWeapon;//fix
+
+					//Not Forget remove delegate on change/drop weapon
 					myWeapon->OnWeaponReloadStart.AddDynamic(this, &ATPS_ShooterCharacter::WeaponReloadStart);
 					myWeapon->OnWeaponReloadEnd.AddDynamic(this, &ATPS_ShooterCharacter::WeaponReloadEnd);
 					myWeapon->OnWeaponFireStart.AddDynamic(this, & ATPS_ShooterCharacter::WeaponFireStart);
-					myWeapon->UpdateWeaponComponent(); // Обновляем привязку ShootLocation
+					
+					// after switch try reload weapon if needed
+					if (CurrentWeapon->GetWeaponRound() <= 0 && CurrentWeapon->CheckCanWeaponReload())
+						CurrentWeapon->InitReload();
+					if (InventoryComponent)
+						InventoryComponent->OnWeaponAmmoAviable.Broadcast(myWeapon->WeaponSetting.WeaponType);
 				}
 			}
 		}
@@ -336,11 +350,16 @@ void ATPS_ShooterCharacter::InitWeapon(FName IdWeaponName)
 	}
 }
 
+void ATPS_ShooterCharacter::RemoveCurrentWeapon()
+{
+
+}
+
 void ATPS_ShooterCharacter::TryReloadWeapon()
 {
 	if (CurrentWeapon && !CurrentWeapon->WeaponReloading)
 	{
-		if (CurrentWeapon->GetWeaponRound() <= CurrentWeapon->WeaponSetting.MaxRound)
+		if (CurrentWeapon->GetWeaponRound() < CurrentWeapon->WeaponSetting.MaxRound && CurrentWeapon->CheckCanWeaponReload())
 			CurrentWeapon->InitReload();
 	}
 }
@@ -350,9 +369,14 @@ void ATPS_ShooterCharacter::WeaponReloadStart(UAnimMontage* Anim)
 	WeaponReloadStart_BP(Anim);
 }
 
-void ATPS_ShooterCharacter::WeaponReloadEnd()
+void ATPS_ShooterCharacter::WeaponReloadEnd(bool bIsSuccess, int32 AmmoTake)
 {
-	WeaponReloadEnd_BP();
+	if (InventoryComponent && CurrentWeapon)
+	{
+		InventoryComponent->AmmoSlotChangeValue(CurrentWeapon->WeaponSetting.WeaponType, AmmoTake);
+		InventoryComponent->SetAdditionalInfoWeapon(CurrentIndexWeapon, CurrentWeapon->AdditionalWeaponInfo);
+	}
+	WeaponReloadEnd_BP(bIsSuccess);
 }
 
 void ATPS_ShooterCharacter::WeaponReloadStart_BP_Implementation(UAnimMontage* Anim)
@@ -360,13 +384,15 @@ void ATPS_ShooterCharacter::WeaponReloadStart_BP_Implementation(UAnimMontage* An
 	// in BP
 }
 
-void ATPS_ShooterCharacter::WeaponReloadEnd_BP_Implementation()
+void ATPS_ShooterCharacter::WeaponReloadEnd_BP_Implementation(bool bIsSuccess)
 {
 	// in BP
 }
 
 void ATPS_ShooterCharacter::WeaponFireStart(UAnimMontage* Anim)
 {
+	if (InventoryComponent && CurrentWeapon)
+		InventoryComponent->SetAdditionalInfoWeapon(CurrentIndexWeapon, CurrentWeapon->AdditionalWeaponInfo);
 	WeaponFireStart_BP(Anim);
 }
 
@@ -378,4 +404,54 @@ void ATPS_ShooterCharacter::WeaponFireStart_BP_Implementation(UAnimMontage* Anim
 UDecalComponent* ATPS_ShooterCharacter::GetCursorToWorld()
 {
 	return CurrentCursor;
+}
+
+//ToDO in one func TrySwitchPreviosWeapon && TrySwicthNextWeapon
+//need Timer to Switch with Anim, this method stupid i must know switch success for second logic inventory
+//now we not have not success switch/ if 1 weapon switch to self
+void ATPS_ShooterCharacter::TrySwitchNextWeapon()
+{
+	if (InventoryComponent->WeaponSlots.Num() > 1)
+	{
+		//We have more then one weapon go switch
+		int8 OldIndex = CurrentIndexWeapon;
+		FAdditionalWeaponInfo OldInfo;
+		if (CurrentWeapon)
+		{
+			OldInfo = CurrentWeapon->AdditionalWeaponInfo;
+			if (CurrentWeapon->WeaponReloading)
+				CurrentWeapon->CancelReload();
+		}
+
+		if (InventoryComponent)
+		{
+			if (InventoryComponent->SwitchWeaponToIndex(CurrentIndexWeapon + 1, OldIndex, OldInfo, true))
+			{
+			}
+		}
+	}
+}
+
+void ATPS_ShooterCharacter::TrySwitchPreviousWeapon()
+{
+	if (InventoryComponent->WeaponSlots.Num() > 1)
+	{
+		//We have more then one weapon go switch
+		int8 OldIndex = CurrentIndexWeapon;
+		FAdditionalWeaponInfo OldInfo;
+		if (CurrentWeapon)
+		{
+			OldInfo = CurrentWeapon->AdditionalWeaponInfo;
+			if (CurrentWeapon->WeaponReloading)
+				CurrentWeapon->CancelReload();
+		}
+
+		if (InventoryComponent)
+		{
+			//InventoryComponent->SetAdditionalInfoWeapon(OldIndex, GetCurrentWeapon()->AdditionalWeaponInfo);
+			if (InventoryComponent->SwitchWeaponToIndex(CurrentIndexWeapon - 1, OldIndex, OldInfo, false))
+			{
+			}
+		}
+	}
 }

@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "../FuncLibrary/Types.h"
 #include "../Items/WeaponDefault.h"
+#include "../Character/TPSInventoryComponent.h"
 //#include "Components/WidgetComponent.h"
 
 #include "TPS_ShooterCharacter.generated.h"
@@ -29,8 +30,9 @@ public:
 	FORCEINLINE class UCameraComponent* GetTopDownCameraComponent() const { return TopDownCameraComponent; }
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
-	/** Returns CursorToWorld subobject **/
-	//FORCEINLINE class UDecalComponent* GetCursorToWorld() { return CursorToWorld; }
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		class UTPSInventoryComponent* InventoryComponent;
 
 private:
 	/** Top down camera */
@@ -111,19 +113,21 @@ public:
 	UFUNCTION(BlueprintCallable)
 		AWeaponDefault* GetCurrentWeapon();
 	UFUNCTION(BlueprintCallable)
-		void InitWeapon(FName IdWeaponName);
+		void InitWeapon(FName IdWeaponName, FAdditionalWeaponInfo WeaponAdditionalInfo, int32 NewCurrentIndexWeapon);
+	UFUNCTION(BlueprintCallable)
+		void RemoveCurrentWeapon();
 	UFUNCTION(BlueprintCallable)
 		void TryReloadWeapon();
 	UFUNCTION()
 		void WeaponReloadStart(UAnimMontage* Anim);
 	UFUNCTION()
-		void WeaponReloadEnd();
+		void WeaponReloadEnd(bool bIsSuccess, int32 AmmoSafe);
 	UFUNCTION(BlueprintNativeEvent)
 		void WeaponReloadStart_BP(UAnimMontage* Anim);
 		void WeaponReloadStart_BP_Implementation(UAnimMontage* Anim);
 	UFUNCTION(BlueprintNativeEvent)
-		void WeaponReloadEnd_BP();
-		void WeaponReloadEnd_BP_Implementation();
+		void WeaponReloadEnd_BP(bool bIsSuccess);
+		void WeaponReloadEnd_BP_Implementation(bool bIsSuccess);
 	UFUNCTION()
 		void WeaponFireStart(UAnimMontage* Anim);
 	UFUNCTION(BlueprintNativeEvent)
@@ -132,5 +136,13 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 		UDecalComponent* GetCursorToWorld();
+
+	//Inventory Func
+
+	void TrySwitchNextWeapon();
+	void TrySwitchPreviousWeapon();
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+		int32 CurrentIndexWeapon = 0;
 };
 
