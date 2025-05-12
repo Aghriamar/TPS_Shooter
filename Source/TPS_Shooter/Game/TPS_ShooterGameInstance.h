@@ -27,5 +27,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 		bool GetWeaponInfoByName(FName NameWeapon, FWeaponInfo& OutInfo);
 	UFUNCTION(BlueprintCallable)
+		bool GetDropItemInfoByWeaponName(FName NameItem, FDropItem& OutInfo);
+	UFUNCTION(BlueprintCallable)
 		bool GetDropItemInfoByName(FName NameItem, FDropItem& OutInfo);
 };

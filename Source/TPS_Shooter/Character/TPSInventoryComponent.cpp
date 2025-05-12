@@ -590,7 +590,7 @@ bool UTPSInventoryComponent::GetDropItemInfoFromInventory(int32 IndexSlot, FDrop
 	UTPS_ShooterGameInstance* myGI = Cast<UTPS_ShooterGameInstance>(GetWorld()->GetGameInstance());
 	if (myGI)
 	{
-		result = myGI->GetDropItemInfoByName(DropItemName, DropItemInfo);
+		result = myGI->GetDropItemInfoByWeaponName(DropItemName, DropItemInfo);
 		if (WeaponSlots.IsValidIndex(IndexSlot))
 		{
 			DropItemInfo.WeaponInfo.AdditionalInfo = WeaponSlots[IndexSlot].AdditionalInfo;
