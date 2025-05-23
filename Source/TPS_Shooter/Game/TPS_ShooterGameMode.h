@@ -13,6 +13,8 @@ class ATPS_ShooterGameMode : public AGameModeBase
 
 public:
 	ATPS_ShooterGameMode();
+
+	void PlayerCharacterDead();
 };
 
 

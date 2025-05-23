@@ -17,3 +17,8 @@ ATPS_ShooterGameMode::ATPS_ShooterGameMode()
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}
 }
+
+void ATPS_ShooterGameMode::PlayerCharacterDead()
+{
+
+}

@@ -35,7 +35,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = Components)
 		class UArrowComponent* ShootLocation = nullptr;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 		FWeaponInfo WeaponSetting;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Info")
 		FAdditionalWeaponInfo AdditionalWeaponInfo;

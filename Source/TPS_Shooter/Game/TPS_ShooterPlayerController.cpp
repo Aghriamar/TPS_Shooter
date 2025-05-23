@@ -110,3 +110,8 @@ void ATPS_ShooterPlayerController::OnSetDestinationReleased()
 	// clear flag to indicate we should stop updating the destination
 	bMoveToMouseCursor = false;
 }
+
+void ATPS_ShooterPlayerController::OnUnPossess()
+{
+	Super::OnUnPossess();
+}

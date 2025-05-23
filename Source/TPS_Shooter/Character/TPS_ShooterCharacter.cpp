@@ -45,7 +45,12 @@ ATPS_ShooterCharacter::ATPS_ShooterCharacter()
 	TopDownCameraComponent->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
 	InventoryComponent = CreateDefaultSubobject<UTPSInventoryComponent>(TEXT("InventoryComponent"));
+	CharHealthComponent = CreateDefaultSubobject<UTPSCharacterHealthComponent>(TEXT("HealthComponent"));
 
+	if (CharHealthComponent)
+	{
+		CharHealthComponent->OnDead.AddDynamic(this, &ATPS_ShooterCharacter::CharDead);
+	}
 	if (InventoryComponent)
 	{
 		InventoryComponent->OnSwitchWeapon.AddDynamic(this, &ATPS_ShooterCharacter::InitWeapon);
@@ -125,82 +130,85 @@ void ATPS_ShooterCharacter::InputAttackReleased()
 
 void ATPS_ShooterCharacter::MovementTick(float DeltaTime)
 {
-	FVector MovementInput = FVector(AxisX, AxisY, 0.0f).GetSafeNormal();
-
-	if (MovementState == EMovementState::SprintRun_State)
+	if (bIsAlive)
 	{
-		FVector ForwardVector = GetActorForwardVector();
-		float ForwardComponent = FVector::DotProduct(MovementInput, ForwardVector);
-		if (ForwardComponent > 0.7f)
+		FVector MovementInput = FVector(AxisX, AxisY, 0.0f).GetSafeNormal();
+
+		if (MovementState == EMovementState::SprintRun_State)
 		{
-			AddMovementInput(ForwardVector, ForwardComponent);
-		}
-	}
-	else
-	{
-		AddMovementInput(FVector(1.0f, 0.0f, 0.0f), AxisX);
-		AddMovementInput(FVector(0.0f, 1.0f, 0.0f), AxisY);
-	}
-
-	APlayerController* MyController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-	if (MyController)
-	{
-		FHitResult TraceHitResult;
-		MyController->GetHitResultUnderCursor(ECC_GameTraceChannel1, true, TraceHitResult);
-		float FindRotatorResultYaw = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TraceHitResult.Location).Yaw;
-		SetActorRotation(FQuat(FRotator(0.0f, FindRotatorResultYaw, 0.0f)));
-
-		if (CurrentWeapon)
-		{
-			FVector Displacement = FVector(0);
-			switch (MovementState)
+			FVector ForwardVector = GetActorForwardVector();
+			float ForwardComponent = FVector::DotProduct(MovementInput, ForwardVector);
+			if (ForwardComponent > 0.7f)
 			{
-			case EMovementState::Aim_State:
-				Displacement = FVector(0.0f, 0.0f, 160.0f);
-				CurrentWeapon->ShouldReduceDispersion = true;
-				break;
-			case EMovementState::AimWalk_State:
-				Displacement = FVector(0.0f, 0.0f, 160.0f);
-				CurrentWeapon->ShouldReduceDispersion = true;
-				break;
-			case EMovementState::Walk_State:
-				Displacement = FVector(0.0f, 0.0f, 120.0f);
-				CurrentWeapon->ShouldReduceDispersion = false;
-				break;
-			case EMovementState::Run_State:
-				Displacement = FVector(0.0f, 0.0f, 120.0f);
-				CurrentWeapon->ShouldReduceDispersion = false;
-				break;
-			case EMovementState::SprintRun_State:
-				CurrentWeapon->ShouldReduceDispersion = false;
-				break;
-			default:
-				break;
+				AddMovementInput(ForwardVector, ForwardComponent);
 			}
-
-			CurrentWeapon->ShootEndLocation = TraceHitResult.Location + Displacement;
 		}
-	}
-
-	if (MovementState == EMovementState::SprintRun_State)
-	{
-		CurrentStamina -= StaminaDecreaseRate * DeltaTime;
-		if (CurrentStamina <= 0.0f)
+		else
 		{
-			CurrentStamina = 0.0f;
-			MovementState = EMovementState::Run_State; // Переход в бег, если выносливость кончилась
+			AddMovementInput(FVector(1.0f, 0.0f, 0.0f), AxisX);
+			AddMovementInput(FVector(0.0f, 1.0f, 0.0f), AxisY);
 		}
-	}
-	else
-	{
-		CurrentStamina += StaminaIncreaseRate * DeltaTime;
-		if (CurrentStamina > MaxStamina)
-		{
-			CurrentStamina = MaxStamina;
-		}
-	}
 
-	ChangeMovementState();
+		APlayerController* MyController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+		if (MyController)
+		{
+			FHitResult TraceHitResult;
+			MyController->GetHitResultUnderCursor(ECC_GameTraceChannel1, true, TraceHitResult);
+			float FindRotatorResultYaw = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TraceHitResult.Location).Yaw;
+			SetActorRotation(FQuat(FRotator(0.0f, FindRotatorResultYaw, 0.0f)));
+
+			if (CurrentWeapon)
+			{
+				FVector Displacement = FVector(0);
+				switch (MovementState)
+				{
+				case EMovementState::Aim_State:
+					Displacement = FVector(0.0f, 0.0f, 160.0f);
+					CurrentWeapon->ShouldReduceDispersion = true;
+					break;
+				case EMovementState::AimWalk_State:
+					Displacement = FVector(0.0f, 0.0f, 160.0f);
+					CurrentWeapon->ShouldReduceDispersion = true;
+					break;
+				case EMovementState::Walk_State:
+					Displacement = FVector(0.0f, 0.0f, 120.0f);
+					CurrentWeapon->ShouldReduceDispersion = false;
+					break;
+				case EMovementState::Run_State:
+					Displacement = FVector(0.0f, 0.0f, 120.0f);
+					CurrentWeapon->ShouldReduceDispersion = false;
+					break;
+				case EMovementState::SprintRun_State:
+					CurrentWeapon->ShouldReduceDispersion = false;
+					break;
+				default:
+					break;
+				}
+
+				CurrentWeapon->ShootEndLocation = TraceHitResult.Location + Displacement;
+			}
+		}
+
+		if (MovementState == EMovementState::SprintRun_State)
+		{
+			CurrentStamina -= StaminaDecreaseRate * DeltaTime;
+			if (CurrentStamina <= 0.0f)
+			{
+				CurrentStamina = 0.0f;
+				MovementState = EMovementState::Run_State; // Переход в бег, если выносливость кончилась
+			}
+		}
+		else
+		{
+			CurrentStamina += StaminaIncreaseRate * DeltaTime;
+			if (CurrentStamina > MaxStamina)
+			{
+				CurrentStamina = MaxStamina;
+			}
+		}
+
+		ChangeMovementState();
+	}
 }
 
 void ATPS_ShooterCharacter::AttackCharEvent(bool bIsFiring)
@@ -454,4 +462,44 @@ void ATPS_ShooterCharacter::TrySwitchPreviousWeapon()
 			}
 		}
 	}
+}
+
+void ATPS_ShooterCharacter::CharDead()
+{
+	float TimeAnim = 0.0f;
+	int32 rnd = FMath::RandHelper(DeadsAnim.Num());
+	if (DeadsAnim.IsValidIndex(rnd) && DeadsAnim[rnd] && GetMesh() && GetMesh()->GetAnimInstance())
+	{
+		TimeAnim = DeadsAnim[rnd]->GetPlayLength();
+		GetMesh()->GetAnimInstance()->Montage_Play(DeadsAnim[rnd]);
+	}
+
+	bIsAlive = false;
+
+	UnPossessed();
+
+	//Timer rag doll
+	GetWorldTimerManager().SetTimer(TimerHandle_RagDollTimer, this, &ATPS_ShooterCharacter::EnableRagdoll, TimeAnim, false);
+
+	GetCursorToWorld()->SetVisibility(false);
+}
+
+void ATPS_ShooterCharacter::EnableRagdoll()
+{
+	if (GetMesh())
+	{
+		GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+		GetMesh()->SetSimulatePhysics(true);
+	}
+}
+
+float ATPS_ShooterCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
+{
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	if (bIsAlive)
+	{
+		CharHealthComponent->ChangeHealthValue(-DamageAmount);
+	}
+
+	return ActualDamage;
 }
