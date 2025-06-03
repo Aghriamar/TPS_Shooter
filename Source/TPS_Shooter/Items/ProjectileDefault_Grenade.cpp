@@ -78,8 +78,8 @@ void AProjectileDefault_Grenade::Explose()
 		GetActorLocation(),
 		ProjectileSetting.ProjectileMinRadiusDamage,
 		ProjectileSetting.ProjectileMaxRadiusDamage,
-		ProjectileSetting.ExplodeFalloffCoef,
-		NULL, IgnoredActor, nullptr, nullptr);
+		5,
+		NULL, IgnoredActor, this, nullptr);
 
 	this->Destroy();
 }

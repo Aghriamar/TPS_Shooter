@@ -8,12 +8,13 @@
 #include "../Items/WeaponDefault.h"
 #include "../Character/TPSInventoryComponent.h"
 #include "../Character/TPSCharacterHealthComponent.h"
+#include "../Interface/TPS_IGameActor.h"
 //#include "Components/WidgetComponent.h"
 
 #include "TPS_ShooterCharacter.generated.h"
 
 UCLASS(Blueprintable)
-class ATPS_ShooterCharacter : public ACharacter
+class ATPS_ShooterCharacter : public ACharacter, public ITPS_IGameActor
 {
 	GENERATED_BODY()
 protected:
@@ -47,10 +48,6 @@ private:
 	/** Camera boom positioning the camera above the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom;
-
-	/** A decal that projects to the cursor location. */
-	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UDecalComponent* CursorToWorld;*/
 
 public:
 	//Cursor
@@ -88,11 +85,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 		TArray<UAnimMontage*> DeadsAnim;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ability")
+		TSubclassOf<UTPS_StateEffect> AbilityEffect;
+
 	//Weapon
 	AWeaponDefault* CurrentWeapon = nullptr;
 
 
 	UDecalComponent* CurrentCursor = nullptr;
+
+	//Effect
+	TArray<UTPS_StateEffect*> Effects;
 
 	//For Demo
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Demo")
@@ -154,8 +157,18 @@ public:
 	void TrySwitchNextWeapon();
 	void TrySwitchPreviousWeapon();
 
+	//Ability func
+	void TryAbilityEnabled();
+
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 		int32 CurrentIndexWeapon = 0;
+
+	//Interface
+	EPhysicalSurface GetSurfaceType() override;
+	TArray<UTPS_StateEffect*> GetAllCurrentEffects() override;
+	void RemoveEffect(UTPS_StateEffect* RemoveEffect) override;
+	void AddEffect(UTPS_StateEffect* newEffect) override;
+	//End Interface
 
 	UFUNCTION()
 	void CharDead();

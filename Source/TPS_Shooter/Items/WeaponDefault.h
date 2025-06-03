@@ -116,11 +116,11 @@ public:
 	bool CheckCanWeaponReload();
 	int8 GetAviableAmmoForReload();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-		bool ShowDebug = false;
-
 	UFUNCTION()
 		void InitDropMesh(UStaticMesh* DropMesh, FTransform Offset, FVector DropImpulseDirection, float LifeTimeMesh, float ImpulseRandomDispersion, float PowerImpulse, float CustomMass);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+		bool ShowDebug = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 		float SizeVectorToChangeShootDirectionLogic = 100.0f;

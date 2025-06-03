@@ -5,6 +5,7 @@
 //#include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Engine/DataTable.h"
+#include "../Items/TPS_StateEffect.h"
 #include "Types.generated.h"
 
 UENUM(BlueprintType)
@@ -83,6 +84,9 @@ struct FProjectileInfo
 	//fix when hit check by surface
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FX")
 		TMap<TEnumAsByte<EPhysicalSurface>, UParticleSystem*> HitFXs;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
+		TSubclassOf<UTPS_StateEffect> Effect = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Explode")
 		UParticleSystem* ExploseFX = nullptr;
@@ -215,26 +219,15 @@ struct FWeaponInfo : public FTableRowBase
 	//if null use trace logic (TSubclassOf<class AProjectileDefault> Projectile = nullptr)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
 		FProjectileInfo ProjectileSetting;
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trace")
-	//	float WeaponDamage = 20.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trace")
 		float DistanceTrace = 2000.0f;
 	//one decal on all?
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HitEffect")
 		UDecalComponent* DecalOnHit = nullptr;
 
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim")
-	//	UAnimMontage* AnimCharFire = nullptr;
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim")
-	//	UAnimMontage* AnimCharReload = nullptr;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim")
 		FAnimationWeaponInfo AnimWeaponInfo;
 
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
-	//	UStaticMesh* MagazineDrop = nullptr;
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
-	//	UStaticMesh* ShellBullets = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
 		FDropMeshInfo ClipDropMesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
@@ -306,4 +299,8 @@ UCLASS()
 class TPS_SHOOTER_API UTypes : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
+
+public:
+	UFUNCTION(BlueprintCallable)
+	static void AddEffectBySurfaceType(AActor* TakeEffectActor, TSubclassOf<UTPS_StateEffect> AddEffectClass, EPhysicalSurface SurfaceType);
 };
