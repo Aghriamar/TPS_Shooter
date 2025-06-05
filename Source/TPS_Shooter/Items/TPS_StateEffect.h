@@ -50,7 +50,7 @@ class TPS_SHOOTER_API UTPS_StateEffect_ExecuteTimer : public UTPS_StateEffect
 	GENERATED_BODY()
 
 public:
-	bool InitObject(AActor* Actor) override;
+ 	bool InitObject(AActor* Actor) override;
 	void DestroyObject() override;
 
 	virtual void Execute();
@@ -68,4 +68,52 @@ public:
 		UParticleSystem* ParticleEffect = nullptr;
 
 	UParticleSystemComponent* ParticleEmitter = nullptr;
+};
+
+UCLASS()
+class TPS_SHOOTER_API UTPS_StateEffect_Stun : public UTPS_StateEffect
+{
+	GENERATED_BODY()
+
+public:
+    bool InitObject(AActor* Actor) override;
+	void DestroyObject() override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stun")
+		float StunDuration = 3.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stun")
+		UAnimMontage* StunAnimation = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stun")
+		TArray<UParticleSystem*> PossibleParticleEffects;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stun")
+		UParticleSystem* CurrentParticleEffect = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stun")
+		FName EffectBoneName = FName("head");
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stun")
+		FTransform EffectOffset = FTransform(FRotator(0), FVector(0, 0, 0), FVector(1));
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stun")
+		UParticleSystemComponent* ParticleComponent = nullptr;
+
+	FTimerHandle EffectTimerHandle;
+
+	UFUNCTION(BlueprintCallable, Category = "Stun")
+		FTransform GetEffectOffset() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Stun")
+		FName GetEffectBoneName() const;
+
+	//UFUNCTION(BlueprintImplementableEvent, Category = "Stun")
+		UFUNCTION(BlueprintImplementableEvent, Category = "Stun")
+	void OnStunEffectApplied(ATPS_ShooterCharacter* TargetCharacter);
+	//void OnStunEffectApplied_Implementation(ATPS_ShooterCharacter* TargetCharacter);
+
+protected:
+	UFUNCTION()
+		void EndEffect();
 };

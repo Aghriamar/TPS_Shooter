@@ -81,10 +81,11 @@ public:
 		bool AimEnabled = false;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 		bool bIsAlive = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
+		bool bIsStunned = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 		TArray<UAnimMontage*> DeadsAnim;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ability")
 		TSubclassOf<UTPS_StateEffect> AbilityEffect;
 

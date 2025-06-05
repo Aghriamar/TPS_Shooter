@@ -111,27 +111,39 @@ void ATPS_ShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 
 void ATPS_ShooterCharacter::InputAxisY(float value)
 {
-	AxisY = value;
+	if (!bIsStunned)
+	{
+		AxisY = value;
+	}
 }
 
 void ATPS_ShooterCharacter::InputAxisX(float value)
 {
-	AxisX = value;
+	if (!bIsStunned)
+	{
+		AxisX = value;
+	}
 }
 
 void ATPS_ShooterCharacter::InputAttackPressed()
 {
-	AttackCharEvent(true);
+	if (!bIsStunned)
+	{
+		AttackCharEvent(true);
+	}
 }
 
 void ATPS_ShooterCharacter::InputAttackReleased()
 {
-	AttackCharEvent(false);
+	if (!bIsStunned)
+	{
+		AttackCharEvent(false);
+	}
 }
 
 void ATPS_ShooterCharacter::MovementTick(float DeltaTime)
 {
-	if (bIsAlive)
+	if (bIsAlive && !bIsStunned)
 	{
 		FVector MovementInput = FVector(AxisX, AxisY, 0.0f).GetSafeNormal();
 
@@ -230,26 +242,29 @@ void ATPS_ShooterCharacter::CharacterUpdate()
 	float ResSpeed = 600.0f;
 	float ResAcceleration = MovementSpeedInfo.NormalAcceleration;
 
-	switch (MovementState)
+	if (!bIsStunned)
 	{
-	case EMovementState::Aim_State:
-		ResSpeed = MovementSpeedInfo.AimSpeedNormal;
-		break;
-	case EMovementState::AimWalk_State:
-		ResSpeed = MovementSpeedInfo.AimSpeedWalk;
-		break;
-	case EMovementState::Walk_State:
-		ResSpeed = MovementSpeedInfo.WalkSpeedNormal;
-		break;
-	case EMovementState::Run_State:
-		ResSpeed = MovementSpeedInfo.RunSpeedNormal;
-		break;
-	case EMovementState::SprintRun_State:
-		ResSpeed = MovementSpeedInfo.SprintRunSpeedRun;
-		ResAcceleration = MovementSpeedInfo.SprintAcceleration;
-		break;
-	default:
-		break;
+		switch (MovementState)
+		{
+		case EMovementState::Aim_State:
+			ResSpeed = MovementSpeedInfo.AimSpeedNormal;
+			break;
+		case EMovementState::AimWalk_State:
+			ResSpeed = MovementSpeedInfo.AimSpeedWalk;
+			break;
+		case EMovementState::Walk_State:
+			ResSpeed = MovementSpeedInfo.WalkSpeedNormal;
+			break;
+		case EMovementState::Run_State:
+			ResSpeed = MovementSpeedInfo.RunSpeedNormal;
+			break;
+		case EMovementState::SprintRun_State:
+			ResSpeed = MovementSpeedInfo.SprintRunSpeedRun;
+			ResAcceleration = MovementSpeedInfo.SprintAcceleration;
+			break;
+		default:
+			break;
+		}
 	}
 
 	GetCharacterMovement()->MaxWalkSpeed = ResSpeed;
@@ -366,7 +381,7 @@ void ATPS_ShooterCharacter::RemoveCurrentWeapon()
 
 void ATPS_ShooterCharacter::TryReloadWeapon()
 {
-	if (CurrentWeapon && !CurrentWeapon->WeaponReloading)
+	if (!bIsStunned && CurrentWeapon && !CurrentWeapon->WeaponReloading)
 	{
 		if (CurrentWeapon->GetWeaponRound() < CurrentWeapon->WeaponSetting.MaxRound && CurrentWeapon->CheckCanWeaponReload())
 			CurrentWeapon->InitReload();
@@ -375,7 +390,10 @@ void ATPS_ShooterCharacter::TryReloadWeapon()
 
 void ATPS_ShooterCharacter::WeaponReloadStart(UAnimMontage* Anim)
 {
-	WeaponReloadStart_BP(Anim);
+	if (!bIsStunned)
+	{
+		WeaponReloadStart_BP(Anim);
+	}
 }
 
 void ATPS_ShooterCharacter::WeaponReloadEnd(bool bIsSuccess, int32 AmmoTake)
@@ -400,7 +418,7 @@ void ATPS_ShooterCharacter::WeaponReloadEnd_BP_Implementation(bool bIsSuccess)
 
 void ATPS_ShooterCharacter::WeaponFireStart(UAnimMontage* Anim)
 {
-	if (InventoryComponent && CurrentWeapon)
+	if (!bIsStunned && InventoryComponent && CurrentWeapon)
 		InventoryComponent->SetAdditionalInfoWeapon(CurrentIndexWeapon, CurrentWeapon->AdditionalWeaponInfo);
 	WeaponFireStart_BP(Anim);
 }
@@ -420,7 +438,7 @@ UDecalComponent* ATPS_ShooterCharacter::GetCursorToWorld()
 //now we not have not success switch/ if 1 weapon switch to self
 void ATPS_ShooterCharacter::TrySwitchNextWeapon()
 {
-	if (InventoryComponent->WeaponSlots.Num() > 1)
+	if (!bIsStunned && InventoryComponent->WeaponSlots.Num() > 1)
 	{
 		//We have more then one weapon go switch
 		int8 OldIndex = CurrentIndexWeapon;
@@ -443,7 +461,7 @@ void ATPS_ShooterCharacter::TrySwitchNextWeapon()
 
 void ATPS_ShooterCharacter::TrySwitchPreviousWeapon()
 {
-	if (InventoryComponent->WeaponSlots.Num() > 1)
+	if (!bIsStunned && InventoryComponent->WeaponSlots.Num() > 1)
 	{
 		//We have more then one weapon go switch
 		int8 OldIndex = CurrentIndexWeapon;
@@ -467,14 +485,14 @@ void ATPS_ShooterCharacter::TrySwitchPreviousWeapon()
 
 void ATPS_ShooterCharacter::TryAbilityEnabled()
 {
-	if (AbilityEffect)//TODO Cool down
-	{
-		UTPS_StateEffect* NewEffect = NewObject<UTPS_StateEffect>(this, AbilityEffect);
-		if (NewEffect)
-		{
-			NewEffect->InitObject(this);
-		}
-	}
+	 if (!bIsStunned && AbilityEffect)//TODO Cool down
+	 {
+	 	UTPS_StateEffect* NewEffect = NewObject<UTPS_StateEffect>(this, AbilityEffect);
+	 	if (NewEffect)
+	 	{
+	 		NewEffect->InitObject(this);
+	 	}
+	 }
 }
 
 EPhysicalSurface ATPS_ShooterCharacter::GetSurfaceType()
