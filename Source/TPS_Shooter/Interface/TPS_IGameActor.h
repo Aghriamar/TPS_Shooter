@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
 #include "../Items/TPS_StateEffect.h"
+#include "../FuncLibrary/Types.h"
 #include "TPS_IGameActor.generated.h"
 
 // This class does not need to be modified.
@@ -23,15 +24,15 @@ class TPS_SHOOTER_API ITPS_IGameActor
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
-
-	//UFUNCTION(BlueprintCallable,BlueprintImplementableEvent,Category = "Event")
-	//	void AviableForEffectsBP();
-	//UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Event")
-	//	bool AviableForEffects();	
-
+	
 	virtual EPhysicalSurface GetSurfaceType();
-
 	virtual TArray<UTPS_StateEffect*> GetAllCurrentEffects();
 	virtual void RemoveEffect(UTPS_StateEffect* RemoveEffect);
 	virtual void AddEffect(UTPS_StateEffect* newEffect);
+
+	//inv
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+		void DropWeaponToWorld(FDropItem DropItemInfo);
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+		void DropAmmoToWorld(EWeaponType TypeAmmo, int32 Cout);
 };

@@ -9,6 +9,7 @@
 #include "../Character/TPSInventoryComponent.h"
 #include "../Character/TPSCharacterHealthComponent.h"
 #include "../Interface/TPS_IGameActor.h"
+#include "../Items/TPS_StateEffect.h"
 //#include "Components/WidgetComponent.h"
 
 #include "TPS_ShooterCharacter.generated.h"
@@ -19,6 +20,61 @@ class ATPS_ShooterCharacter : public ACharacter, public ITPS_IGameActor
 	GENERATED_BODY()
 protected:
 	virtual void BeginPlay() override;
+
+	//Inputs
+	void InputAxisY(float Value);
+	void InputAxisX(float Value);
+
+	void InputAttackPressed();
+	void InputAttackReleased();
+
+	void InputWalkPressed();
+	void InputWalkReleased();
+
+	void InputSprintPressed();
+	void InputSprintReleased();
+
+	void InputAimPressed();
+	void InputAimReleased();
+
+	//Inventory Inputs
+	void TrySwitchNextWeapon();
+	void TrySwitchPreviousWeapon();
+	//Ability Inputs
+	void TryAbilityEnabled();
+
+	template<int32 Id>
+	void TKeyPressed()
+	{
+		TrySwitchWeaponToIndexByKeyInput(Id);
+	}
+	//Inputs End
+
+	//Input Flags
+	float AxisX = 0.0f;
+	float AxisY = 0.0f;
+
+	bool SprintRunEnabled = false;
+	bool WalkEnabled = false;
+	bool AimEnabled = false;
+
+	bool bIsAlive = true;
+
+	EMovementState MovementState = EMovementState::Run_State;
+
+	AWeaponDefault* CurrentWeapon = nullptr;
+
+	UDecalComponent* CurrentCursor = nullptr;
+
+	TArray<UTPS_StateEffect*> Effects;
+
+	int32 CurrentIndexWeapon = 0;
+
+	UFUNCTION()
+		void CharDead();
+	void EnableRagdoll();
+
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
 public:
 	ATPS_ShooterCharacter();
@@ -40,22 +96,13 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true"))
 	class UTPSCharacterHealthComponent* CharHealthComponent;
 
-private:
-	/** Top down camera */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UCameraComponent* TopDownCameraComponent;
-
-	/** Camera boom positioning the camera above the character */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class USpringArmComponent* CameraBoom;
-
-public:
 	//Cursor
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cursor")
 		UMaterialInterface* CursorMaterial = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cursor")
 		FVector CursorSize = FVector(20.0f, 40.0f, 40.0f);
 
+	//Default move rule and state character
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 		float MaxStamina = 100.0f;
 
@@ -69,18 +116,8 @@ public:
 		float StaminaIncreaseRate = 5.0f;  // ¬осстановление выносливости в секунду
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-		EMovementState MovementState = EMovementState::Run_State;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 		FCharacterSpeed MovementSpeedInfo;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-		bool SprintRunEnabled = false;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-		bool WalkEnabled = false;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-		bool AimEnabled = false;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-		bool bIsAlive = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
 		bool bIsStunned = false;
 
@@ -89,58 +126,42 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ability")
 		TSubclassOf<UTPS_StateEffect> AbilityEffect;
 
-	//Weapon
-	AWeaponDefault* CurrentWeapon = nullptr;
+private:
+	/** Top down camera */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UCameraComponent* TopDownCameraComponent;
 
+	/** Camera boom positioning the camera above the character */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class USpringArmComponent* CameraBoom;
 
-	UDecalComponent* CurrentCursor = nullptr;
-
-	//Effect
-	TArray<UTPS_StateEffect*> Effects;
-
-	//For Demo
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Demo")
-		FName InitWeaponName;
-
-
+public:
+		
+	// Tick Func
 	UFUNCTION()
-		void InputAxisX(float value);
-	UFUNCTION()
-		void InputAxisY(float value);
-	UFUNCTION()
-		void InputAttackPressed();
-	UFUNCTION()
-		void InputAttackReleased();
-
-	float AxisX = 0.0f;
-	float AxisY = 0.0f;
-
-	UFUNCTION()
-	void MovementTick(float DeltaTime);
+		void MovementTick(float DeltaTime);
+	// Tick Func End
 
 	//Func
-	UFUNCTION(BlueprintCallable)
-		void AttackCharEvent(bool bIsFiring);
-	UFUNCTION(BlueprintCallable)
-		void CharacterUpdate();
-	UFUNCTION(BlueprintCallable)
-		void ChangeMovementState();
+	void CharacterUpdate();
+	void ChangeMovementState();
 
-	UFUNCTION(BlueprintCallable)
-		AWeaponDefault* GetCurrentWeapon();
-	UFUNCTION(BlueprintCallable)
+	void AttackCharEvent(bool bIsFiring);
+
+	UFUNCTION()
 		void InitWeapon(FName IdWeaponName, FAdditionalWeaponInfo WeaponAdditionalInfo, int32 NewCurrentIndexWeapon);
-	UFUNCTION(BlueprintCallable)
-		void RemoveCurrentWeapon();
-	UFUNCTION(BlueprintCallable)
-		void TryReloadWeapon();
+	void TryReloadWeapon();
+	//
+	bool TrySwitchWeaponToIndexByKeyInput(int32 ToIndex);
+	void DropCurrentWeapon();
+
 	UFUNCTION()
 		void WeaponReloadStart(UAnimMontage* Anim);
-	UFUNCTION()
-		void WeaponReloadEnd(bool bIsSuccess, int32 AmmoSafe);
 	UFUNCTION(BlueprintNativeEvent)
 		void WeaponReloadStart_BP(UAnimMontage* Anim);
 		void WeaponReloadStart_BP_Implementation(UAnimMontage* Anim);
+	UFUNCTION()
+		void WeaponReloadEnd(bool bIsSuccess, int32 AmmoSafe);
 	UFUNCTION(BlueprintNativeEvent)
 		void WeaponReloadEnd_BP(bool bIsSuccess);
 		void WeaponReloadEnd_BP_Implementation(bool bIsSuccess);
@@ -150,30 +171,23 @@ public:
 		void WeaponFireStart_BP(UAnimMontage* Anim);
 		void WeaponFireStart_BP_Implementation(UAnimMontage* Anim);
 
-	UFUNCTION(BlueprintCallable)
-		UDecalComponent* GetCursorToWorld();
+		UFUNCTION(BlueprintCallable, BlueprintPure)
+			AWeaponDefault* GetCurrentWeapon();
+		UFUNCTION(BlueprintCallable, BlueprintPure)
+			UDecalComponent* GetCursorToWorld();
+		UFUNCTION(BlueprintCallable, BlueprintPure)
+			EMovementState GetMovementState();
+		UFUNCTION(BlueprintCallable, BlueprintPure)
+			TArray<UTPS_StateEffect*> GetCurrentEffectsOnChar();
+		UFUNCTION(BlueprintCallable, BlueprintPure)
+			int32 GetCurrentWeaponIndex();
+		//Func End
 
-	//Inventory Func
-
-	void TrySwitchNextWeapon();
-	void TrySwitchPreviousWeapon();
-
-	//Ability func
-	void TryAbilityEnabled();
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
-		int32 CurrentIndexWeapon = 0;
-
-	//Interface
-	EPhysicalSurface GetSurfaceType() override;
-	TArray<UTPS_StateEffect*> GetAllCurrentEffects() override;
-	void RemoveEffect(UTPS_StateEffect* RemoveEffect) override;
-	void AddEffect(UTPS_StateEffect* newEffect) override;
-	//End Interface
-
-	UFUNCTION()
-	void CharDead();
-	void EnableRagdoll();
-	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+		//Interface
+		EPhysicalSurface GetSurfaceType() override;
+		TArray<UTPS_StateEffect*> GetAllCurrentEffects() override;
+		void RemoveEffect(UTPS_StateEffect* RemoveEffect)override;
+		void AddEffect(UTPS_StateEffect* newEffect)override;
+		//End Interface
 };
 

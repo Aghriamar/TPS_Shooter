@@ -35,6 +35,11 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = Components)
 		class UArrowComponent* ShootLocation = nullptr;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon Info") // Для отладки и доступа из BP
+		FName WeaponID;
+
+	
+
 	UPROPERTY(VisibleAnywhere)
 		FWeaponInfo WeaponSetting;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Info")
@@ -79,6 +84,9 @@ public:
 		float ReloadTimer = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ReloadLogic Debug") //Remove !!! Debug
 		float ReloadTime = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire Logic")
+		FName IdWeaponName;
 
 	//flags
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FireLogic")

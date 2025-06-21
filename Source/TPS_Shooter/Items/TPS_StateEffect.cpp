@@ -133,14 +133,14 @@ bool UTPS_StateEffect_Stun::InitObject(AActor* Actor)
 		}
 
 		// Блокировка стрельбы и перезарядки
-		if (Character->CurrentWeapon)
+		if (Character->GetCurrentWeapon())
 		{
 			
-			Character->CurrentWeapon->BlockFire = true;
-			Character->CurrentWeapon->WeaponFiring = false;
-			if (Character->CurrentWeapon->WeaponReloading)
+			Character->GetCurrentWeapon()->BlockFire = true;
+			Character->GetCurrentWeapon()->WeaponFiring = false;
+			if (Character->GetCurrentWeapon()->WeaponReloading)
 			{
-				Character->CurrentWeapon->CancelReload();
+				Character->GetCurrentWeapon()->CancelReload();
 			}
 		}
 
@@ -199,10 +199,10 @@ void UTPS_StateEffect_Stun::EndEffect()
 		}
 
 		// Разблокировка стрельбы
-		if (Character->CurrentWeapon)
+		if (Character->GetCurrentWeapon())
 		{
-			Character->CurrentWeapon->BlockFire = false;
-			Character->CurrentWeapon->WeaponFiring = false;
+			Character->GetCurrentWeapon()->BlockFire = false;
+			Character->GetCurrentWeapon()->WeaponFiring = false;
 		}
 	}
 

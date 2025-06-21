@@ -14,6 +14,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Engine/World.h"
 #include "../Game/TPS_ShooterGameInstance.h"
+#include "../Items/ProjectileDefault.h"
 
 ATPS_ShooterCharacter::ATPS_ShooterCharacter()
 {
@@ -100,13 +101,46 @@ void ATPS_ShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	PlayerInputComponent->BindAxis(TEXT("MoveForward"), this, &ATPS_ShooterCharacter::InputAxisX);
 	PlayerInputComponent->BindAxis(TEXT("MoveRight"), this, &ATPS_ShooterCharacter::InputAxisY);
 
+	PlayerInputComponent->BindAction(TEXT("ChangeToSprint"), EInputEvent::IE_Pressed, this, &ATPS_ShooterCharacter::InputSprintPressed);
+	PlayerInputComponent->BindAction(TEXT("ChangeToWalk"), EInputEvent::IE_Pressed, this, &ATPS_ShooterCharacter::InputWalkPressed);
+	PlayerInputComponent->BindAction(TEXT("AimEvent"), EInputEvent::IE_Pressed, this, &ATPS_ShooterCharacter::InputAimPressed);
+	PlayerInputComponent->BindAction(TEXT("ChangeToSprint"), EInputEvent::IE_Released, this, &ATPS_ShooterCharacter::InputSprintReleased);
+	PlayerInputComponent->BindAction(TEXT("ChangeToWalk"), EInputEvent::IE_Released, this, &ATPS_ShooterCharacter::InputWalkReleased);
+	PlayerInputComponent->BindAction(TEXT("AimEvent"), EInputEvent::IE_Released, this, &ATPS_ShooterCharacter::InputAimReleased);
+
 	PlayerInputComponent->BindAction(TEXT("FireEvent"), EInputEvent::IE_Pressed, this, &ATPS_ShooterCharacter::InputAttackPressed);
 	PlayerInputComponent->BindAction(TEXT("FireEvent"), EInputEvent::IE_Released, this, &ATPS_ShooterCharacter::InputAttackReleased);
 	PlayerInputComponent->BindAction(TEXT("ReloadEvent"), EInputEvent::IE_Released, this, &ATPS_ShooterCharacter::TryReloadWeapon);
 
 	PlayerInputComponent->BindAction(TEXT("SwitchNextWeapon"), EInputEvent::IE_Pressed, this, &ATPS_ShooterCharacter::TrySwitchNextWeapon);
 	PlayerInputComponent->BindAction(TEXT("SwitchPreviousWeapon"), EInputEvent::IE_Pressed, this, &ATPS_ShooterCharacter::TrySwitchPreviousWeapon);
+	
 	PlayerInputComponent->BindAction(TEXT("AbilityAction"), EInputEvent::IE_Pressed, this, &ATPS_ShooterCharacter::TryAbilityEnabled);
+
+	PlayerInputComponent->BindAction(TEXT("DropCurrentWeapon"), EInputEvent::IE_Pressed, this, &ATPS_ShooterCharacter::DropCurrentWeapon);
+
+	TArray<FKey> HotKeys;
+	HotKeys.Add(EKeys::One);
+	HotKeys.Add(EKeys::Two);
+	HotKeys.Add(EKeys::Three);
+	HotKeys.Add(EKeys::Four);
+	HotKeys.Add(EKeys::Five);
+	HotKeys.Add(EKeys::Six);
+	HotKeys.Add(EKeys::Seven);
+	HotKeys.Add(EKeys::Eight);
+	HotKeys.Add(EKeys::Nine);
+	HotKeys.Add(EKeys::Zero);
+
+	PlayerInputComponent->BindKey(HotKeys[1], IE_Pressed, this, &ATPS_ShooterCharacter::TKeyPressed<1>);
+	PlayerInputComponent->BindKey(HotKeys[2], IE_Pressed, this, &ATPS_ShooterCharacter::TKeyPressed<2>);
+	PlayerInputComponent->BindKey(HotKeys[3], IE_Pressed, this, &ATPS_ShooterCharacter::TKeyPressed<3>);
+	PlayerInputComponent->BindKey(HotKeys[4], IE_Pressed, this, &ATPS_ShooterCharacter::TKeyPressed<4>);
+	PlayerInputComponent->BindKey(HotKeys[5], IE_Pressed, this, &ATPS_ShooterCharacter::TKeyPressed<5>);
+	PlayerInputComponent->BindKey(HotKeys[6], IE_Pressed, this, &ATPS_ShooterCharacter::TKeyPressed<6>);
+	PlayerInputComponent->BindKey(HotKeys[7], IE_Pressed, this, &ATPS_ShooterCharacter::TKeyPressed<7>);
+	PlayerInputComponent->BindKey(HotKeys[8], IE_Pressed, this, &ATPS_ShooterCharacter::TKeyPressed<8>);
+	PlayerInputComponent->BindKey(HotKeys[9], IE_Pressed, this, &ATPS_ShooterCharacter::TKeyPressed<9>);
+	PlayerInputComponent->BindKey(HotKeys[0], IE_Pressed, this, &ATPS_ShooterCharacter::TKeyPressed<0>);
 }
 
 void ATPS_ShooterCharacter::InputAxisY(float value)
@@ -139,6 +173,42 @@ void ATPS_ShooterCharacter::InputAttackReleased()
 	{
 		AttackCharEvent(false);
 	}
+}
+
+void ATPS_ShooterCharacter::InputWalkPressed()
+{
+	WalkEnabled = true;
+	ChangeMovementState();
+}
+
+void ATPS_ShooterCharacter::InputWalkReleased()
+{
+	WalkEnabled = false;
+	ChangeMovementState();
+}
+
+void ATPS_ShooterCharacter::InputSprintPressed()
+{
+	SprintRunEnabled = true;
+	ChangeMovementState();
+}
+
+void ATPS_ShooterCharacter::InputSprintReleased()
+{
+	SprintRunEnabled = false;
+	ChangeMovementState();
+}
+
+void ATPS_ShooterCharacter::InputAimPressed()
+{
+	AimEnabled = true;
+	ChangeMovementState();
+}
+
+void ATPS_ShooterCharacter::InputAimReleased()
+{
+	AimEnabled = false;
+	ChangeMovementState();
 }
 
 void ATPS_ShooterCharacter::MovementTick(float DeltaTime)
@@ -222,6 +292,21 @@ void ATPS_ShooterCharacter::MovementTick(float DeltaTime)
 
 		ChangeMovementState();
 	}
+}
+
+EMovementState ATPS_ShooterCharacter::GetMovementState()
+{
+	return MovementState;
+}
+
+TArray<UTPS_StateEffect*> ATPS_ShooterCharacter::GetCurrentEffectsOnChar()
+{
+	return Effects;
+}
+
+int32 ATPS_ShooterCharacter::GetCurrentWeaponIndex()
+{
+	return CurrentIndexWeapon;
 }
 
 void ATPS_ShooterCharacter::AttackCharEvent(bool bIsFiring)
@@ -344,6 +429,7 @@ void ATPS_ShooterCharacter::InitWeapon(FName IdWeaponName, FAdditionalWeaponInfo
 				{
 					FAttachmentTransformRules Rule(EAttachmentRule::SnapToTarget, false);
 					myWeapon->AttachToComponent(GetMesh(), Rule, FName("WeaponSocketRightHand"));
+					myWeapon->WeaponID = IdWeaponName;
 					CurrentWeapon = myWeapon;
 
 					myWeapon->WeaponSetting = myWeaponInfo;
@@ -374,11 +460,6 @@ void ATPS_ShooterCharacter::InitWeapon(FName IdWeaponName, FAdditionalWeaponInfo
 	}
 }
 
-void ATPS_ShooterCharacter::RemoveCurrentWeapon()
-{
-
-}
-
 void ATPS_ShooterCharacter::TryReloadWeapon()
 {
 	if (!bIsStunned && CurrentWeapon && !CurrentWeapon->WeaponReloading)
@@ -404,6 +485,38 @@ void ATPS_ShooterCharacter::WeaponReloadEnd(bool bIsSuccess, int32 AmmoTake)
 		InventoryComponent->SetAdditionalInfoWeapon(CurrentIndexWeapon, CurrentWeapon->AdditionalWeaponInfo);
 	}
 	WeaponReloadEnd_BP(bIsSuccess);
+}
+
+bool ATPS_ShooterCharacter::TrySwitchWeaponToIndexByKeyInput(int32 ToIndex)
+{
+	bool bIsSuccess = false;
+	if (CurrentWeapon && !CurrentWeapon->WeaponReloading && InventoryComponent->WeaponSlots.IsValidIndex(ToIndex))
+	{
+		if (CurrentIndexWeapon != ToIndex && InventoryComponent)
+		{
+			int32 OldIndex = CurrentIndexWeapon;
+			FAdditionalWeaponInfo OldInfo;
+
+			if (CurrentWeapon)
+			{
+				OldInfo = CurrentWeapon->AdditionalWeaponInfo;
+				if (CurrentWeapon->WeaponReloading)
+					CurrentWeapon->CancelReload();
+			}
+
+			bIsSuccess = InventoryComponent->SwitchWeaponByIndex(ToIndex, OldIndex, OldInfo);
+		}
+	}
+	return bIsSuccess;
+}
+
+void ATPS_ShooterCharacter::DropCurrentWeapon()
+{
+	if (InventoryComponent)
+	{
+		FDropItem ItemInfo;
+		InventoryComponent->DropWeapobByIndex(CurrentIndexWeapon, ItemInfo);
+	}
 }
 
 void ATPS_ShooterCharacter::WeaponReloadStart_BP_Implementation(UAnimMontage* Anim)
@@ -438,7 +551,7 @@ UDecalComponent* ATPS_ShooterCharacter::GetCursorToWorld()
 //now we not have not success switch/ if 1 weapon switch to self
 void ATPS_ShooterCharacter::TrySwitchNextWeapon()
 {
-	if (!bIsStunned && InventoryComponent->WeaponSlots.Num() > 1)
+	if (!bIsStunned && CurrentWeapon && !CurrentWeapon->WeaponReloading && InventoryComponent->WeaponSlots.Num() > 1)
 	{
 		//We have more then one weapon go switch
 		int8 OldIndex = CurrentIndexWeapon;
@@ -452,7 +565,7 @@ void ATPS_ShooterCharacter::TrySwitchNextWeapon()
 
 		if (InventoryComponent)
 		{
-			if (InventoryComponent->SwitchWeaponToIndex(CurrentIndexWeapon + 1, OldIndex, OldInfo, true))
+			if (InventoryComponent->SwitchWeaponToIndexByNextPreviosIndex(CurrentIndexWeapon + 1, OldIndex, OldInfo, true))
 			{
 			}
 		}
@@ -461,7 +574,7 @@ void ATPS_ShooterCharacter::TrySwitchNextWeapon()
 
 void ATPS_ShooterCharacter::TrySwitchPreviousWeapon()
 {
-	if (!bIsStunned && InventoryComponent->WeaponSlots.Num() > 1)
+	if (!bIsStunned && CurrentWeapon && !CurrentWeapon->WeaponReloading && InventoryComponent->WeaponSlots.Num() > 1)
 	{
 		//We have more then one weapon go switch
 		int8 OldIndex = CurrentIndexWeapon;
@@ -476,7 +589,7 @@ void ATPS_ShooterCharacter::TrySwitchPreviousWeapon()
 		if (InventoryComponent)
 		{
 			//InventoryComponent->SetAdditionalInfoWeapon(OldIndex, GetCurrentWeapon()->AdditionalWeaponInfo);
-			if (InventoryComponent->SwitchWeaponToIndex(CurrentIndexWeapon - 1, OldIndex, OldInfo, false))
+			if (InventoryComponent->SwitchWeaponToIndexByNextPreviosIndex(CurrentIndexWeapon - 1, OldIndex, OldInfo, false))
 			{
 			}
 		}
