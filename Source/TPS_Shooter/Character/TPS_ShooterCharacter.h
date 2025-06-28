@@ -189,5 +189,9 @@ public:
 		void RemoveEffect(UTPS_StateEffect* RemoveEffect)override;
 		void AddEffect(UTPS_StateEffect* newEffect)override;
 		//End Interface
+
+		UFUNCTION(BlueprintNativeEvent)
+			void CharDead_BP();
+		void CharDead_BP_Implementation();
 };
 

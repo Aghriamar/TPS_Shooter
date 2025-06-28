@@ -48,6 +48,8 @@ void UTPSHealthComponent::ChangeHealthValue(float ChangeValue)
 
 	Health += ChangeValue;
 
+	OnHealthChange.Broadcast(Health, ChangeValue);
+
 	if (Health > 100.0f)
 	{
 		Health = 100.0f;
@@ -59,6 +61,4 @@ void UTPSHealthComponent::ChangeHealthValue(float ChangeValue)
 			OnDead.Broadcast();
 		}
 	}
-
-	OnHealthChange.Broadcast(Health, ChangeValue);
 }

@@ -23,28 +23,6 @@ void UTPSInventoryComponent::BeginPlay()
 	Super::BeginPlay();
 
 	// ...
-	//Find init weaponsSlots and First Init Weapon
-	for (int8 i = 0; i < WeaponSlots.Num(); i++)
-	{
-		UTPS_ShooterGameInstance* myGI = Cast<UTPS_ShooterGameInstance>(GetWorld()->GetGameInstance());
-		if (myGI)
-		{
-			if (!WeaponSlots[i].NameItem.IsNone())
-			{
-				FWeaponInfo Info;
-				if (myGI->GetWeaponInfoByName(WeaponSlots[i].NameItem, Info))
-					WeaponSlots[i].AdditionalInfo.Round = Info.MaxRound;
-			}
-		}
-	}
-
-	MaxSlotsWeapon = WeaponSlots.Num();
-
-	if (WeaponSlots.IsValidIndex(0))
-	{
-		if (!WeaponSlots[0].NameItem.IsNone())
-			OnSwitchWeapon.Broadcast(WeaponSlots[0].NameItem, WeaponSlots[0].AdditionalInfo, 0);
-	}
 }
 
 
@@ -311,7 +289,7 @@ FAdditionalWeaponInfo UTPSInventoryComponent::GetAdditionalInfoWeapon(int32 Inde
 		int8 i = 0;
 		while (i < WeaponSlots.Num() && !bIsFind)
 		{
-			if (/*WeaponSlots[i].IndexSlot*/i == IndexWeapon)
+			if (i == IndexWeapon)
 			{
 				result = WeaponSlots[i].AdditionalInfo;
 				bIsFind = true;
@@ -337,9 +315,24 @@ int32 UTPSInventoryComponent::GetWeaponIndexSlotByName(FName IdWeaponName)
 		if (WeaponSlots[i].NameItem == IdWeaponName)
 		{
 			bIsFind = true;
-			result = i/*WeaponSlots[i].IndexSlot*/;
+			result = i;
 		}
 		i++;
+	}
+	return result;
+}
+
+FName UTPSInventoryComponent::GetWeaponNameBySlotIndex(int32 indexSlot)
+{
+	FName result;
+
+	if (WeaponSlots.IsValidIndex(indexSlot))
+	{
+		result = WeaponSlots[indexSlot].NameItem;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UTPSInventoryComponent::GetWeaponNameBySlotIndex - Not Correct index Weapon  - %d"), indexSlot);
 	}
 	return result;
 }
@@ -360,17 +353,6 @@ bool UTPSInventoryComponent::GetWeaponTypeByIndexSlot(int32 IndexSlot, EWeaponTy
 		}
 	}
 	return bIsFind;
-}
-
-FName UTPSInventoryComponent::GetWeaponNameBySlotIndex(int32 indexSlot)
-{
-	FName result;
-
-	if (WeaponSlots.IsValidIndex(indexSlot))
-	{
-		result = WeaponSlots[indexSlot].NameItem;
-	}
-	return result;
 }
 
 bool UTPSInventoryComponent::GetWeaponTypeByNameWeapon(FName IdWeaponName, EWeaponType& WeaponType)
@@ -397,7 +379,7 @@ void UTPSInventoryComponent::SetAdditionalInfoWeapon(int32 IndexWeapon, FAdditio
 		int8 i = 0;
 		while (i < WeaponSlots.Num() && !bIsFind)
 		{
-			if (/*WeaponSlots[i].IndexSlot*/i == IndexWeapon)
+			if (i == IndexWeapon)
 			{
 				WeaponSlots[i].AdditionalInfo = NewInfo;
 				bIsFind = true;
@@ -446,7 +428,6 @@ bool UTPSInventoryComponent::CheckAmmoForWeapon(EWeaponType TypeWeapon, int8& Av
 			AviableAmmoForWeapon = AmmoSlots[i].Cout;
 			if (AmmoSlots[i].Cout > 0)
 			{
-				//OnWeaponAmmoAviable.Broadcast(TypeWeapon);//remove not here, only when pickUp ammo this type, or swithc weapon
 				return true;
 			}
 
@@ -456,7 +437,7 @@ bool UTPSInventoryComponent::CheckAmmoForWeapon(EWeaponType TypeWeapon, int8& Av
 
 	if (AviableAmmoForWeapon <= 0)
 	{
-		OnWeaponAmmoEmpty.Broadcast(TypeWeapon);//visual empty ammo slot
+		OnWeaponAmmoEmpty.Broadcast(TypeWeapon);
 	}
 	else
 	{
@@ -588,4 +569,42 @@ bool UTPSInventoryComponent::GetDropItemInfoFromInventory(int32 IndexSlot, FDrop
 	}
 
 	return result;
+}
+
+TArray<FWeaponSlot> UTPSInventoryComponent::GetWeaponSlots()
+{
+	return WeaponSlots;
+}
+
+TArray<FAmmoSlot> UTPSInventoryComponent::GetAmmoSlots()
+{
+	return AmmoSlots;
+}
+
+void UTPSInventoryComponent::InitInventory(TArray<FWeaponSlot> NewWeaponSlotsInfo, TArray<FAmmoSlot> NewAmmoSlotsInfo)
+{
+	WeaponSlots = NewWeaponSlotsInfo;
+	AmmoSlots = NewAmmoSlotsInfo;
+	// Find init weaponsSlots and First Init Weapon
+	for (int8 i = 0; i < WeaponSlots.Num(); i++)
+	{
+		UTPS_ShooterGameInstance* myGI = Cast<UTPS_ShooterGameInstance>(GetWorld()->GetGameInstance());
+		if (myGI)
+		{
+			if (!WeaponSlots[i].NameItem.IsNone())
+			{
+				//FWeaponInfo Info;
+				//if (myGI->GetWeaponInfoByName(WeaponSlots[i].NameItem, Info))
+					//WeaponSlots[i].AdditionalInfo.Round = Info.MaxRound;
+			}
+		}
+	}
+
+	MaxSlotsWeapon = WeaponSlots.Num();
+
+	if (WeaponSlots.IsValidIndex(0))
+	{
+		if (!WeaponSlots[0].NameItem.IsNone())
+			OnSwitchWeapon.Broadcast(WeaponSlots[0].NameItem, WeaponSlots[0].AdditionalInfo, 0);
+	}
 }

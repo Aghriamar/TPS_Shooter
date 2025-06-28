@@ -17,16 +17,11 @@ class TPS_SHOOTER_API UTPSCharacterHealthComponent : public UTPSHealthComponent
 	GENERATED_BODY()
 	
 public:
-	UPROPERTY(BlueprintAssignable, EditAnywhere, BlueprintReadWrite, Category = "Health")
+	UPROPERTY(BlueprintAssignable, Category = "Health")
 		FOnShieldChange OnShieldChange;
 
 	FTimerHandle TimerHandle_CollDownShieldTimer;
 	FTimerHandle TimerHandle_ShieldRecoveryRateTimer;
-protected:
-
-	float Shield = 100.0f;
-
-public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shield")
 		float CoolDownShieldRecoverTime = 5.0f;
@@ -34,6 +29,11 @@ public:
 		float ShieldRecoverValue = 1.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shield")
 		float ShieldRecoverRate = 0.1f;
+protected:
+
+	float Shield = 100.0f;
+
+public:
 
 	void ChangeHealthValue(float ChangeValue) override;
 
@@ -44,4 +44,7 @@ public:
 	void CoolDownShieldEnd();
 
 	void RecoveryShield();
+
+	UFUNCTION(BlueprintCallable)
+		float GetShieldValue();
 };

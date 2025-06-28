@@ -161,7 +161,7 @@ void ATPS_ShooterCharacter::InputAxisX(float value)
 
 void ATPS_ShooterCharacter::InputAttackPressed()
 {
-	if (!bIsStunned)
+	if (!bIsStunned && bIsAlive)
 	{
 		AttackCharEvent(true);
 	}
@@ -462,7 +462,7 @@ void ATPS_ShooterCharacter::InitWeapon(FName IdWeaponName, FAdditionalWeaponInfo
 
 void ATPS_ShooterCharacter::TryReloadWeapon()
 {
-	if (!bIsStunned && CurrentWeapon && !CurrentWeapon->WeaponReloading)
+	if (!bIsStunned && bIsAlive && CurrentWeapon && !CurrentWeapon->WeaponReloading)
 	{
 		if (CurrentWeapon->GetWeaponRound() < CurrentWeapon->WeaponSetting.MaxRound && CurrentWeapon->CheckCanWeaponReload())
 			CurrentWeapon->InitReload();
@@ -643,6 +643,11 @@ void ATPS_ShooterCharacter::AddEffect(UTPS_StateEffect* newEffect)
 	Effects.Add(newEffect);
 }
 
+void ATPS_ShooterCharacter::CharDead_BP_Implementation()
+{
+	//BP
+}
+
 void ATPS_ShooterCharacter::CharDead()
 {
 	float TimeAnim = 0.0f;
@@ -655,12 +660,21 @@ void ATPS_ShooterCharacter::CharDead()
 
 	bIsAlive = false;
 
+	if (GetController())
+	{
+		GetController()->UnPossess();
+	}
+
 	UnPossessed();
 
 	//Timer rag doll
 	GetWorldTimerManager().SetTimer(TimerHandle_RagDollTimer, this, &ATPS_ShooterCharacter::EnableRagdoll, TimeAnim, false);
 
 	GetCursorToWorld()->SetVisibility(false);
+
+	AttackCharEvent(false);
+
+	CharDead_BP();
 }
 
 void ATPS_ShooterCharacter::EnableRagdoll()
