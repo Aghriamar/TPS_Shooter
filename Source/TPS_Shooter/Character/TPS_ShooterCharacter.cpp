@@ -433,14 +433,12 @@ void ATPS_ShooterCharacter::InitWeapon(FName IdWeaponName, FAdditionalWeaponInfo
 					CurrentWeapon = myWeapon;
 
 					myWeapon->WeaponSetting = myWeaponInfo;
-					//myWeapon->AdditionalWeaponInfo.Round = myWeaponInfo.MaxRound;
 					myWeapon->ReloadTime = myWeaponInfo.ReloadTime;
 					myWeapon->UpdateStateWeapon(MovementState);
 					myWeapon->AdditionalWeaponInfo = WeaponAdditionalInfo;
-					//if(InventoryComponent)
-					CurrentIndexWeapon = NewCurrentIndexWeapon;//fix
 
-					//Not Forget remove delegate on change/drop weapon
+					CurrentIndexWeapon = NewCurrentIndexWeapon;
+
 					myWeapon->OnWeaponReloadStart.AddDynamic(this, &ATPS_ShooterCharacter::WeaponReloadStart);
 					myWeapon->OnWeaponReloadEnd.AddDynamic(this, &ATPS_ShooterCharacter::WeaponReloadEnd);
 					myWeapon->OnWeaponFireStart.AddDynamic(this, & ATPS_ShooterCharacter::WeaponFireStart);
@@ -603,7 +601,7 @@ void ATPS_ShooterCharacter::TryAbilityEnabled()
 	 	UTPS_StateEffect* NewEffect = NewObject<UTPS_StateEffect>(this, AbilityEffect);
 	 	if (NewEffect)
 	 	{
-	 		NewEffect->InitObject(this);
+	 		NewEffect->InitObject(this, NAME_None);
 	 	}
 	 }
 }
@@ -699,7 +697,7 @@ float ATPS_ShooterCharacter::TakeDamage(float DamageAmount, struct FDamageEvent 
 		AProjectileDefault* myProjectile = Cast<AProjectileDefault>(DamageCauser);
 		if (myProjectile)
 		{
-			UTypes::AddEffectBySurfaceType(this, myProjectile->ProjectileSetting.Effect, GetSurfaceType());
+			UTypes::AddEffectBySurfaceType(this, NAME_None, myProjectile->ProjectileSetting.Effect, GetSurfaceType()); // to do NAME_None - bone for radial damage
 		}
 	}
 

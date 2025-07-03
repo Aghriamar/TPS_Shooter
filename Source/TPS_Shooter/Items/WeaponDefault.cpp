@@ -109,7 +109,7 @@ void AWeaponDefault::DispersionTick(float DeltaTIme)
 			}
 		}
 	}
-	if (ShowDebug)
+	if (DebugWeaponShow)
 		UE_LOG(LogTemp, Warning, TEXT("Dispersion: MAX = %f. MIN = %f. Current = %f"), CurrentDispersionMax, CurrentDispersionMin, CurrentDispersion);
 }
 
@@ -171,6 +171,10 @@ void AWeaponDefault::WeaponInit()
 
 void AWeaponDefault::UpdateWeaponComponent()
 {
+	// —оздаем правила дл€ прикреплени€. SnapToTarget означает, что компонент "прилипнет"
+	// к родителю, использу€ свое относительное положение, которое задали в редакторе.
+	// ¬торой параметр (true) "сваривает" физические тела вместе, что обычно и требуетс€.
+	//const FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, false);
 	if (SkeletalMeshWeapon && SkeletalMeshWeapon->SkeletalMesh)
 	{
 		ActiveWeaponComponent = SkeletalMeshWeapon;
@@ -187,6 +191,7 @@ void AWeaponDefault::UpdateWeaponComponent()
 	{
 		ActiveWeaponComponent = RootComponent; // «апасной вариант
 		ShootLocation->SetupAttachment(ActiveWeaponComponent);
+		//ShootLocation->SetupAttachment(ActiveWeaponComponent, AttachmentRules);
 		UE_LOG(LogTemp, Warning, TEXT("No valid mesh, ShootLocation attached to RootComponent"));
 	}
 }
@@ -222,7 +227,7 @@ void AWeaponDefault::Fire()
 
 	if (WeaponSetting.AnimWeaponInfo.AnimWeaponFire
 		&& SkeletalMeshWeapon
-		&& SkeletalMeshWeapon->GetAnimInstance()) //Bad Code? maybe best way init local variable or in func
+		&& SkeletalMeshWeapon->GetAnimInstance())
 	{
 		SkeletalMeshWeapon->GetAnimInstance()->Montage_Play(WeaponSetting.AnimWeaponInfo.AnimWeaponFire);
 	}
@@ -295,7 +300,7 @@ void AWeaponDefault::Fire()
 				TArray<AActor*> Actors;
 
 				EDrawDebugTrace::Type DebugTrace;
-				if (ShowDebug)
+				if (DebugWeaponShow)
 				{
 					DrawDebugLine(GetWorld(), SpawnLocation, SpawnLocation + ShootLocation->GetForwardVector() * WeaponSetting.DistanceTrace, FColor::Black, false, 5.f, (uint8)'\000', 0.5f);
 					DebugTrace = EDrawDebugTrace::ForDuration;
@@ -332,7 +337,7 @@ void AWeaponDefault::Fire()
 						UGameplayStatics::PlaySoundAtLocation(GetWorld(), WeaponSetting.ProjectileSetting.HitSound, Hit.ImpactPoint);
 					}
 
-					UTypes::AddEffectBySurfaceType(Hit.GetActor(), ProjectileInfo.Effect, mySurfacetype);
+					UTypes::AddEffectBySurfaceType(Hit.GetActor(), Hit.BoneName, ProjectileInfo.Effect, mySurfacetype);
 
 					UGameplayStatics::ApplyPointDamage(Hit.GetActor(), WeaponSetting.ProjectileSetting.ProjectileDamage, Hit.TraceStart, Hit, GetInstigatorController(), this, NULL);
 				}
@@ -476,7 +481,7 @@ void AWeaponDefault::InitReload()
 
 	if (WeaponSetting.AnimWeaponInfo.AnimWeaponReload
 		&& SkeletalMeshWeapon
-		&& SkeletalMeshWeapon->GetAnimInstance()) //Bad Code? maybe best way init local variable or in func
+		&& SkeletalMeshWeapon->GetAnimInstance())
 	{
 		SkeletalMeshWeapon->GetAnimInstance()->Montage_Play(AnimWeaponToPlay);
 	}

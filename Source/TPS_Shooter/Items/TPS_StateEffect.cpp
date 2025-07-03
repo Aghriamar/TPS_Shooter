@@ -12,7 +12,7 @@
 #include "Animation/AnimMontage.h"
 #include "../Interface/TPS_IGameActor.h"
 
-bool UTPS_StateEffect::InitObject(AActor* Actor)
+bool UTPS_StateEffect::InitObject(AActor* Actor, FName NameBoneHit)
 {
 	myActor = Actor;
 
@@ -40,9 +40,9 @@ void UTPS_StateEffect::DestroyObject()
 	}
 }
 
-bool UTPS_StateEffect_ExecuteOnce::InitObject(AActor* Actor)
+bool UTPS_StateEffect_ExecuteOnce::InitObject(AActor* Actor, FName NameBoneHit)
 {
-	Super::InitObject(Actor);
+	Super::InitObject(Actor, NameBoneHit);
 	ExecuteOnce();
 	return true;
 }
@@ -66,9 +66,9 @@ void UTPS_StateEffect_ExecuteOnce::ExecuteOnce()
 	DestroyObject();
 }
 
-bool UTPS_StateEffect_ExecuteTimer::InitObject(AActor* Actor)
+bool UTPS_StateEffect_ExecuteTimer::InitObject(AActor* Actor, FName NameBoneHit)
 {
-	Super::InitObject(Actor);
+	Super::InitObject(Actor, NameBoneHit);
 
 	GetWorld()->GetTimerManager().SetTimer(TimerHandle_EffectTimer, this, &UTPS_StateEffect_ExecuteTimer::DestroyObject, Timer, false);
 	GetWorld()->GetTimerManager().SetTimer(TimerHandle_ExecuteTimer, this, &UTPS_StateEffect_ExecuteTimer::Execute, RateTime, true);
@@ -77,10 +77,18 @@ bool UTPS_StateEffect_ExecuteTimer::InitObject(AActor* Actor)
 	{
 		//ToDo for object with interface create function return offset, Name bones, 
 		//ToDo Random init Effect with aviable array (For)
-		FName NameBoneToAttached;
+		FName NameBoneToAttached = NameBoneHit;
 		FVector Loc = FVector(0);
 
-		ParticleEmitter = UGameplayStatics::SpawnEmitterAttached(ParticleEffect, myActor->GetRootComponent(), NameBoneToAttached, Loc, FRotator::ZeroRotator, EAttachLocation::SnapToTarget, false);
+		USceneComponent* myMesh = Cast<USceneComponent>(myActor->GetComponentByClass(USkeletalMeshComponent::StaticClass()));
+		if (myMesh)
+		{
+			ParticleEmitter = UGameplayStatics::SpawnEmitterAttached(ParticleEffect, myMesh, NameBoneToAttached, Loc, FRotator::ZeroRotator, EAttachLocation::SnapToTarget, false);
+		}
+		else
+		{
+			ParticleEmitter = UGameplayStatics::SpawnEmitterAttached(ParticleEffect, myActor->GetRootComponent(), NameBoneToAttached, Loc, FRotator::ZeroRotator, EAttachLocation::SnapToTarget, false);
+		}
 	}
 
 	return true;
@@ -97,7 +105,6 @@ void UTPS_StateEffect_ExecuteTimer::Execute()
 {
 	if (myActor)
 	{
-		//UGameplayStatics::ApplyDamage(myActor,Power,nullptr,nullptr,nullptr);	
 		UTPSHealthComponent* myHealthComp = Cast<UTPSHealthComponent>(myActor->GetComponentByClass(UTPSHealthComponent::StaticClass()));
 		if (myHealthComp)
 		{
@@ -106,9 +113,9 @@ void UTPS_StateEffect_ExecuteTimer::Execute()
 	}
 }
 
-bool UTPS_StateEffect_Stun::InitObject(AActor* Actor)
+bool UTPS_StateEffect_Stun::InitObject(AActor* Actor, FName NameBoneHit)
 {
-	if (!Super::InitObject(Actor))
+	if (!Super::InitObject(Actor, NameBoneHit))
 	{
 		return false;
 	}

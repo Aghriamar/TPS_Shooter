@@ -158,11 +158,11 @@ struct FAnimationWeaponInfo
 		UAnimMontage* AnimCharReload = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim Char")
 		UAnimMontage* AnimCharReloadAim = nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim Char")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim Weapon")
 		UAnimMontage* AnimWeaponReload = nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim Char")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim Weapon")
 		UAnimMontage* AnimWeaponReloadAim = nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim Char")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anim Weapon")
 		UAnimMontage* AnimWeaponFire = nullptr;
 };
 
@@ -302,5 +302,5 @@ class TPS_SHOOTER_API UTypes : public UBlueprintFunctionLibrary
 
 public:
 	UFUNCTION(BlueprintCallable)
-	static void AddEffectBySurfaceType(AActor* TakeEffectActor, TSubclassOf<UTPS_StateEffect> AddEffectClass, EPhysicalSurface SurfaceType);
+	static void AddEffectBySurfaceType(AActor* TakeEffectActor, FName NameBoneHit, TSubclassOf<UTPS_StateEffect> AddEffectClass, EPhysicalSurface SurfaceType);
 };
