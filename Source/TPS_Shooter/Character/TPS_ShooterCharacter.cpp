@@ -309,6 +309,11 @@ int32 ATPS_ShooterCharacter::GetCurrentWeaponIndex()
 	return CurrentIndexWeapon;
 }
 
+bool ATPS_ShooterCharacter::GetIsAlive()
+{
+	return bIsAlive;
+}
+
 void ATPS_ShooterCharacter::AttackCharEvent(bool bIsFiring)
 {
 	AWeaponDefault* myWeapon = nullptr;
