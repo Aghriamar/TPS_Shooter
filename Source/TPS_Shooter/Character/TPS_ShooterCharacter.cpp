@@ -15,6 +15,8 @@
 #include "Engine/World.h"
 #include "../Game/TPS_ShooterGameInstance.h"
 #include "../Items/ProjectileDefault.h"
+#include <TPS_Shooter/TPS_Shooter.h>
+#include "Net/UnrealNetwork.h"
 
 ATPS_ShooterCharacter::ATPS_ShooterCharacter()
 {
@@ -60,6 +62,9 @@ ATPS_ShooterCharacter::ATPS_ShooterCharacter()
 	// Activate ticking in order to update the cursor every frame.
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
+
+	//Network
+	bReplicates = true;
 }
 
 void ATPS_ShooterCharacter::Tick(float DeltaSeconds)
@@ -69,7 +74,7 @@ void ATPS_ShooterCharacter::Tick(float DeltaSeconds)
 	if (CurrentCursor)
 	{
 		APlayerController* myPC = Cast<APlayerController>(GetController());
-		if (myPC)
+		if (myPC && myPC->IsLocalPlayerController())
 		{
 			FHitResult TraceHitResult;
 			myPC->GetHitResultUnderCursor(ECC_Visibility, true, TraceHitResult);
@@ -88,9 +93,12 @@ void ATPS_ShooterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (CursorMaterial)
+	if (GetWorld() && GetWorld()->GetNetMode() != NM_DedicatedServer)
 	{
-		CurrentCursor = UGameplayStatics::SpawnDecalAtLocation(GetWorld(), CursorMaterial, CursorSize, FVector(0));
+		if(CursorMaterial && GetLocalRole() == ROLE_AutonomousProxy || GetLocalRole() == ROLE_Authority)
+		{
+			CurrentCursor = UGameplayStatics::SpawnDecalAtLocation(GetWorld(), CursorMaterial, CursorSize, FVector(0));
+		}
 	}
 }
 
@@ -215,82 +223,87 @@ void ATPS_ShooterCharacter::MovementTick(float DeltaTime)
 {
 	if (bIsAlive && !bIsStunned)
 	{
-		FVector MovementInput = FVector(AxisX, AxisY, 0.0f).GetSafeNormal();
-
-		if (MovementState == EMovementState::SprintRun_State)
+		if (GetController() && GetController()->IsLocalPlayerController())
 		{
-			FVector ForwardVector = GetActorForwardVector();
-			float ForwardComponent = FVector::DotProduct(MovementInput, ForwardVector);
-			if (ForwardComponent > 0.7f)
+			FString SEnum = UEnum::GetValueAsString(GetMovementState());
+			UE_LOG(LogTPS_Shooter_Net, Warning, TEXT("Movement State - %s"), *SEnum);
+
+			FVector MovementInput = FVector(AxisX, AxisY, 0.0f).GetSafeNormal();
+
+			if (MovementState == EMovementState::SprintRun_State)
 			{
-				AddMovementInput(ForwardVector, ForwardComponent);
+				FVector myRotationVector = FVector(AxisX, AxisY, 0.0f);
+				FRotator myRotator = myRotationVector.ToOrientationRotator();
+				SetActorRotationByYaw_OnServer_Implementation(myRotator.Yaw);
 			}
-		}
-		else
-		{
-			AddMovementInput(FVector(1.0f, 0.0f, 0.0f), AxisX);
-			AddMovementInput(FVector(0.0f, 1.0f, 0.0f), AxisY);
-		}
-
-		APlayerController* MyController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-		if (MyController)
-		{
-			FHitResult TraceHitResult;
-			MyController->GetHitResultUnderCursor(ECC_GameTraceChannel1, true, TraceHitResult);
-			float FindRotatorResultYaw = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TraceHitResult.Location).Yaw;
-			SetActorRotation(FQuat(FRotator(0.0f, FindRotatorResultYaw, 0.0f)));
-
-			if (CurrentWeapon)
+			else
 			{
-				FVector Displacement = FVector(0);
-				switch (MovementState)
+				//AddMovementInput(FVector(1.0f, 0.0f, 0.0f), AxisX);
+				//AddMovementInput(FVector(0.0f, 1.0f, 0.0f), AxisY);
+
+
+				APlayerController* MyController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+				if (MyController)
 				{
-				case EMovementState::Aim_State:
-					Displacement = FVector(0.0f, 0.0f, 160.0f);
-					CurrentWeapon->ShouldReduceDispersion = true;
-					break;
-				case EMovementState::AimWalk_State:
-					Displacement = FVector(0.0f, 0.0f, 160.0f);
-					CurrentWeapon->ShouldReduceDispersion = true;
-					break;
-				case EMovementState::Walk_State:
-					Displacement = FVector(0.0f, 0.0f, 120.0f);
-					CurrentWeapon->ShouldReduceDispersion = false;
-					break;
-				case EMovementState::Run_State:
-					Displacement = FVector(0.0f, 0.0f, 120.0f);
-					CurrentWeapon->ShouldReduceDispersion = false;
-					break;
-				case EMovementState::SprintRun_State:
-					CurrentWeapon->ShouldReduceDispersion = false;
-					break;
-				default:
-					break;
+					FHitResult TraceHitResult;
+					MyController->GetHitResultUnderCursor(ECC_GameTraceChannel1, true, TraceHitResult);
+					float FindRotatorResultYaw = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TraceHitResult.Location).Yaw;
+					SetActorRotation(FQuat(FRotator(0.0f, FindRotatorResultYaw, 0.0f)));
+					SetActorRotationByYaw_OnServer_Implementation(FindRotatorResultYaw);
+
+					if (CurrentWeapon)
+					{
+						FVector Displacement = FVector(0);
+						switch (MovementState)
+						{
+						case EMovementState::Aim_State:
+							Displacement = FVector(0.0f, 0.0f, 160.0f);
+							CurrentWeapon->ShouldReduceDispersion = true;
+							break;
+						case EMovementState::AimWalk_State:
+							Displacement = FVector(0.0f, 0.0f, 160.0f);
+							CurrentWeapon->ShouldReduceDispersion = true;
+							break;
+						case EMovementState::Walk_State:
+							Displacement = FVector(0.0f, 0.0f, 120.0f);
+							CurrentWeapon->ShouldReduceDispersion = false;
+							break;
+						case EMovementState::Run_State:
+							Displacement = FVector(0.0f, 0.0f, 120.0f);
+							CurrentWeapon->ShouldReduceDispersion = false;
+							break;
+						case EMovementState::SprintRun_State:
+							CurrentWeapon->ShouldReduceDispersion = false;
+							break;
+						default:
+							break;
+						}
+
+						CurrentWeapon->ShootEndLocation = TraceHitResult.Location + Displacement;
+					}
 				}
-
-				CurrentWeapon->ShootEndLocation = TraceHitResult.Location + Displacement;
 			}
-		}
 
-		if (MovementState == EMovementState::SprintRun_State)
-		{
-			CurrentStamina -= StaminaDecreaseRate * DeltaTime;
-			if (CurrentStamina <= 0.0f)
+			if (MovementState == EMovementState::SprintRun_State)
 			{
-				CurrentStamina = 0.0f;
-				MovementState = EMovementState::Run_State; // Переход в бег, если выносливость кончилась
+				CurrentStamina -= StaminaDecreaseRate * DeltaTime;
+				if (CurrentStamina <= 0.0f)
+				{
+					CurrentStamina = 0.0f;
+					MovementState = EMovementState::Run_State; // Переход в бег, если выносливость кончилась
+				}
 			}
-		}
-		else
-		{
-			CurrentStamina += StaminaIncreaseRate * DeltaTime;
-			if (CurrentStamina > MaxStamina)
+			else
 			{
-				CurrentStamina = MaxStamina;
+				CurrentStamina += StaminaIncreaseRate * DeltaTime;
+				if (CurrentStamina > MaxStamina)
+				{
+					CurrentStamina = MaxStamina;
+				}
 			}
-		}
 
-		ChangeMovementState();
+			ChangeMovementState();
+		}
 	}
 }
 
@@ -363,6 +376,7 @@ void ATPS_ShooterCharacter::CharacterUpdate()
 
 void ATPS_ShooterCharacter::ChangeMovementState()
 {
+	EMovementState NewState = EMovementState::Run_State;
 	FVector ForwardVector = GetActorForwardVector();
 	FVector MovementInput = GetVelocity().GetSafeNormal();
 	bool bIsMovingForward = FVector::DotProduct(ForwardVector, MovementInput) > 0.7f;
@@ -371,26 +385,26 @@ void ATPS_ShooterCharacter::ChangeMovementState()
 	{
 		WalkEnabled = false;
 		AimEnabled = false;
-		MovementState = EMovementState::SprintRun_State;
+		NewState = EMovementState::SprintRun_State;
 	}
 	else if (WalkEnabled && AimEnabled)
 	{
-		MovementState = EMovementState::AimWalk_State;
+		NewState = EMovementState::AimWalk_State;
 	}
 	else if (WalkEnabled)
 	{
-		MovementState = EMovementState::Walk_State;
+		NewState = EMovementState::Walk_State;
 	}
 	else if (AimEnabled)
 	{
-		MovementState = EMovementState::Aim_State;
+		NewState = EMovementState::Aim_State;
 	}
 	else
 	{
-		MovementState = EMovementState::Run_State;
+		NewState = EMovementState::Run_State;
 	}
 
-	CharacterUpdate();
+	SetMovementState_OnServer_Implementation(NewState);
 
 	//Weapon state update
 	AWeaponDefault* myWeapon = GetCurrentWeapon();
@@ -651,6 +665,30 @@ void ATPS_ShooterCharacter::CharDead_BP_Implementation()
 	//BP
 }
 
+void ATPS_ShooterCharacter::SetActorRotationByYaw_OnServer_Implementation(float Yaw)
+{
+	SetActorRotationByYaw_Multicast(Yaw);
+}
+
+void ATPS_ShooterCharacter::SetActorRotationByYaw_Multicast_Implementation(float Yaw)
+{
+	if (Controller && !Controller->IsLocalPlayerController())
+	{
+		SetActorRotation(FQuat(FRotator(0.0f, Yaw, 0.0f)));
+	}
+}
+
+void ATPS_ShooterCharacter::SetMovementState_OnServer_Implementation(EMovementState NewState)
+{
+	SetMovementState_Multicast(NewState);
+}
+
+void ATPS_ShooterCharacter::SetMovementState_Multicast_Implementation(EMovementState NewState)
+{
+	MovementState = NewState;
+	CharacterUpdate();
+}
+
 void ATPS_ShooterCharacter::CharDead()
 {
 	float TimeAnim = 0.0f;
@@ -707,4 +745,11 @@ float ATPS_ShooterCharacter::TakeDamage(float DamageAmount, struct FDamageEvent 
 	}
 
 	return ActualDamage;
+}
+
+void ATPS_ShooterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ATPS_ShooterCharacter, MovementState);
 }
