@@ -60,8 +60,10 @@ protected:
 
 	bool bIsAlive = true;
 
+	UPROPERTY(Replicated)
 	EMovementState MovementState = EMovementState::Run_State;
 
+	UPROPERTY(Replicated)
 	AWeaponDefault* CurrentWeapon = nullptr;
 
 	UDecalComponent* CurrentCursor = nullptr;
@@ -196,5 +198,18 @@ public:
 		UFUNCTION(BlueprintNativeEvent)
 			void CharDead_BP();
 		void CharDead_BP_Implementation();
-};
 
+		UFUNCTION(Server, Unreliable)
+			void SetActorRotationByYaw_OnServer(float Yaw);
+			void SetActorRotationByYaw_OnServer_Implementation(float Yaw);
+		UFUNCTION(NetMulticast, Unreliable)
+			void SetActorRotationByYaw_Multicast(float Yaw);
+			void SetActorRotationByYaw_Multicast_Implementation(float Yaw);
+
+		UFUNCTION(Server, Reliable)
+			void SetMovementState_OnServer(EMovementState NewState);
+			void SetMovementState_OnServer_Implementation(EMovementState NewState);
+		UFUNCTION(NetMulticast, Reliable)
+			void SetMovementState_Multicast(EMovementState NewState);
+			void SetMovementState_Multicast_Implementation(EMovementState NewState);
+};

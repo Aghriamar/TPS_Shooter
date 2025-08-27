@@ -36,4 +36,8 @@ public:
 	float TimerToExplose = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grenade")
 	float TimeToExplose = 5.0f;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void ShowExplosion_Multicast();
+	void ShowExplosion_Multicast_Implementation();
 };

@@ -58,14 +58,33 @@ void AProjectileDefault_Grenade::ImpactProjectile()
 
 void AProjectileDefault_Grenade::Explose()
 {
-	if (DebugExplodeShow)
+	if (HasAuthority())
 	{
-		DrawDebugSphere(GetWorld(), GetActorLocation(), ProjectileSetting.ProjectileMinRadiusDamage, 12, FColor::Green, false, 12.0f);
-		DrawDebugSphere(GetWorld(), GetActorLocation(), ProjectileSetting.ProjectileMaxRadiusDamage, 12, FColor::Red, false, 12.0f);
-		DrawDebugSphere(GetWorld(), GetActorLocation(), (ProjectileSetting.ProjectileMinRadiusDamage + ProjectileSetting.ProjectileMaxRadiusDamage) / 2.0f, 12, FColor::Yellow, false, 12.0f);
-	}
+		if (DebugExplodeShow)
+		{
+			DrawDebugSphere(GetWorld(), GetActorLocation(), ProjectileSetting.ProjectileMinRadiusDamage, 12, FColor::Green, false, 12.0f);
+			DrawDebugSphere(GetWorld(), GetActorLocation(), ProjectileSetting.ProjectileMaxRadiusDamage, 12, FColor::Red, false, 12.0f);
+			DrawDebugSphere(GetWorld(), GetActorLocation(), (ProjectileSetting.ProjectileMinRadiusDamage + ProjectileSetting.ProjectileMaxRadiusDamage) / 2.0f, 12, FColor::Yellow, false, 12.0f);
+		}
 
-	TimerEnabled = false;
+		TimerEnabled = false;
+
+		TArray<AActor*> IgnoredActor;
+		UGameplayStatics::ApplyRadialDamageWithFalloff(GetWorld(),
+			ProjectileSetting.ExploseMaxDamage,
+			ProjectileSetting.ExploseMaxDamage * 0.2f,
+			GetActorLocation(),
+			ProjectileSetting.ProjectileMinRadiusDamage,
+			ProjectileSetting.ProjectileMaxRadiusDamage,
+			5,
+			NULL, IgnoredActor, this, nullptr);
+
+		this->Destroy();
+	}
+}
+
+void AProjectileDefault_Grenade::ShowExplosion_Multicast_Implementation()
+{
 	if (ProjectileSetting.ExploseFX)
 	{
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ProjectileSetting.ExploseFX, GetActorLocation(), GetActorRotation(), FVector(1.0f));
@@ -74,16 +93,5 @@ void AProjectileDefault_Grenade::Explose()
 	{
 		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ProjectileSetting.ExploseSound, GetActorLocation());
 	}
-
-	TArray<AActor*> IgnoredActor;
-	UGameplayStatics::ApplyRadialDamageWithFalloff(GetWorld(),
-		ProjectileSetting.ExploseMaxDamage,
-		ProjectileSetting.ExploseMaxDamage * 0.2f,
-		GetActorLocation(),
-		ProjectileSetting.ProjectileMinRadiusDamage,
-		ProjectileSetting.ProjectileMaxRadiusDamage,
-		5,
-		NULL, IgnoredActor, this, nullptr);
-
-	this->Destroy();
 }
+
