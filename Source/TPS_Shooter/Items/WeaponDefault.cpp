@@ -300,7 +300,7 @@ void AWeaponDefault::Fire()
 			else
 			{
 				//TODO: Multicast trace FX
-				if (HasAuthority)
+				if (HasAuthority())
 				{
 					FHitResult Hit;
 					TArray<AActor*> Actors;

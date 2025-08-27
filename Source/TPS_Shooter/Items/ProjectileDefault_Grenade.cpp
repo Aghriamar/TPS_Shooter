@@ -58,7 +58,7 @@ void AProjectileDefault_Grenade::ImpactProjectile()
 
 void AProjectileDefault_Grenade::Explose()
 {
-	if (HasAuthority)
+	if (HasAuthority())
 	{
 		if (DebugExplodeShow)
 		{
