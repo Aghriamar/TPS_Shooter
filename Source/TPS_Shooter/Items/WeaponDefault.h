@@ -153,6 +153,13 @@ public:
 	void FXWeaponFire_Multicast(UParticleSystem* FxFire, USoundBase* SoundFire);
 	void FXWeaponFire_Multicast_Implementation(UParticleSystem* FxFire, USoundBase* SoundFire);
 
+	UFUNCTION(NetMulticast, Unreliable)
+	void TraceFX_Multicast(const FVector& Start, const FVector& End);
+	void TraceFX_Multicast_Implementation(const FVector& Start, const FVector& End);
+	UFUNCTION(NetMulticast, Unreliable)
+	void ImpactFX_Multicast(UParticleSystem* FxImpact, USoundBase* SoundImpact, UMaterialInterface* DecalImpact, const FHitResult& Hit);
+	void ImpactFX_Multicast_Implementation(UParticleSystem* FxImpact, USoundBase* SoundImpact, UMaterialInterface* DecalImpact, const FHitResult& Hit);
+
 	// Функция для обновления привязки при смене оружия
 	UFUNCTION(BlueprintCallable)
 		void UpdateWeaponComponent();

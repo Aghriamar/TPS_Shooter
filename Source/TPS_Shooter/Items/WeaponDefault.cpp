@@ -300,51 +300,45 @@ void AWeaponDefault::Fire()
 			else
 			{
 				//TODO: Multicast trace FX
-
-				FHitResult Hit;
-				TArray<AActor*> Actors;
-
-				EDrawDebugTrace::Type DebugTrace;
-				if (DebugWeaponShow)
+				if (HasAuthority)
 				{
-					DrawDebugLine(GetWorld(), SpawnLocation, SpawnLocation + ShootLocation->GetForwardVector() * WeaponSetting.DistanceTrace, FColor::Black, false, 5.f, (uint8)'\000', 0.5f);
-					DebugTrace = EDrawDebugTrace::ForDuration;
-				}
-				else
-					DebugTrace = EDrawDebugTrace::None;
+					FHitResult Hit;
+					TArray<AActor*> Actors;
 
-				UKismetSystemLibrary::LineTraceSingle(GetWorld(), SpawnLocation, EndLocation * WeaponSetting.DistanceTrace,
-					ETraceTypeQuery::TraceTypeQuery4, false, Actors, EDrawDebugTrace::ForDuration, Hit, true, FLinearColor::Red, FLinearColor::Green, 5.0f);
-
-				if (Hit.GetActor() && Hit.PhysMaterial.IsValid())
-				{
-					EPhysicalSurface mySurfacetype = UGameplayStatics::GetSurfaceType(Hit);
-
-					if (WeaponSetting.ProjectileSetting.HitDecals.Contains(mySurfacetype))
+					EDrawDebugTrace::Type DebugTrace;
+					if (DebugWeaponShow)
 					{
-						UMaterialInterface* myMaterial = WeaponSetting.ProjectileSetting.HitDecals[mySurfacetype];
+						DrawDebugLine(GetWorld(), SpawnLocation, SpawnLocation + ShootLocation->GetForwardVector() * WeaponSetting.DistanceTrace, FColor::Black, false, 5.f, (uint8)'\000', 0.5f);
+						DebugTrace = EDrawDebugTrace::ForDuration;
+					}
+					else
+						DebugTrace = EDrawDebugTrace::None;
 
-						if (myMaterial && Hit.GetComponent())
+					bool bIsHit = GetWorld()->LineTraceSingleByChannel(Hit, SpawnLocation, EndLocation, ECC_Visibility);
+					FVector TraceFX_End = bIsHit ? Hit.ImpactPoint : EndLocation;
+					TraceFX_Multicast_Implementation(SpawnLocation, TraceFX_End);
+
+					if (bIsHit)
+					{
+						EPhysicalSurface mySurfacetype = UGameplayStatics::GetSurfaceType(Hit);
+
+						UParticleSystem* myParticle = nullptr;
+						if (WeaponSetting.ProjectileSetting.HitFXs.Contains(mySurfacetype))
 						{
-							UGameplayStatics::SpawnDecalAttached(myMaterial, FVector(20.0f), Hit.GetComponent(), NAME_None, Hit.ImpactPoint, Hit.ImpactNormal.Rotation(), EAttachLocation::KeepWorldPosition, 10.0f);
+							myParticle = WeaponSetting.ProjectileSetting.HitFXs[mySurfacetype];
 						}
-					}
-					if (WeaponSetting.ProjectileSetting.HitFXs.Contains(mySurfacetype))
-					{
-						UParticleSystem* myParticle = WeaponSetting.ProjectileSetting.HitFXs[mySurfacetype];
-						if (myParticle)
+
+						UMaterialInterface* myMaterial = nullptr;
+						if (WeaponSetting.ProjectileSetting.HitDecals.Contains(mySurfacetype))
 						{
-							UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), myParticle, FTransform(Hit.ImpactNormal.Rotation(), Hit.ImpactPoint, FVector(1.0f)));
+							myMaterial = WeaponSetting.ProjectileSetting.HitDecals[mySurfacetype];
 						}
-					}
-					if (WeaponSetting.ProjectileSetting.HitSound)
-					{
-						UGameplayStatics::PlaySoundAtLocation(GetWorld(), WeaponSetting.ProjectileSetting.HitSound, Hit.ImpactPoint);
-					}
 
-					UTypes::AddEffectBySurfaceType(Hit.GetActor(), Hit.BoneName, ProjectileInfo.Effect, mySurfacetype);
+						ImpactFX_Multicast_Implementation(myParticle, WeaponSetting.ProjectileSetting.HitSound, myMaterial, Hit);
 
-					UGameplayStatics::ApplyPointDamage(Hit.GetActor(), WeaponSetting.ProjectileSetting.ProjectileDamage, Hit.TraceStart, Hit, GetInstigatorController(), this, NULL);
+						UTypes::AddEffectBySurfaceType(Hit.GetActor(), Hit.BoneName, ProjectileInfo.Effect, mySurfacetype);
+						UGameplayStatics::ApplyPointDamage(Hit.GetActor(), WeaponSetting.ProjectileSetting.ProjectileDamage, Hit.TraceStart, Hit, GetInstigatorController(), this, NULL);
+					}
 				}
 			}
 		}
@@ -663,6 +657,34 @@ void AWeaponDefault::FXWeaponFire_Multicast_Implementation(UParticleSystem* FxFi
 	if (FxFire)
 	{
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), FxFire, ShootLocation->GetComponentTransform());
+	}
+}
+
+void AWeaponDefault::TraceFX_Multicast_Implementation(const FVector& Start, const FVector& End)
+{
+	if (WeaponSetting.ProjectileSetting.ProjectileTrailFx)
+	{
+		UParticleSystemComponent* TraceFXComponent = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), WeaponSetting.ProjectileSetting.ProjectileTrailFx, Start);
+		if (TraceFXComponent)
+		{
+			TraceFXComponent->SetBeamEndPoint(0, End);
+		}
+	}
+}
+
+void AWeaponDefault::ImpactFX_Multicast_Implementation(UParticleSystem* FxImpact, USoundBase* SoundImpact, UMaterialInterface* DecalImpact, const FHitResult& Hit)
+{
+	if (SoundImpact)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), SoundImpact, Hit.ImpactPoint);
+	}
+	if (FxImpact)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), FxImpact, FTransform(Hit.ImpactNormal.Rotation(), Hit.ImpactPoint, FVector(1.0f)));
+	}
+	if (DecalImpact && Hit.GetComponent())
+	{
+		UGameplayStatics::SpawnDecalAttached(DecalImpact, FVector(20.0f), Hit.GetComponent(), Hit.BoneName, Hit.ImpactPoint, Hit.ImpactNormal.Rotation(), EAttachLocation::KeepWorldPosition, 10.0f);
 	}
 }
 
